@@ -16,6 +16,7 @@ export default defineConfig({
       { find: /^@ai-reality\/storage-prisma$/, replacement: src('storage-prisma/src/index.ts') },
       { find: /^@ai-reality\/llm-anthropic$/, replacement: src('llm-anthropic/src/index.ts') },
       { find: /^@ai-reality\/narrative$/, replacement: src('narrative/src/index.ts') },
+      { find: /^@ai-reality\/play$/, replacement: src('play/src/index.ts') },
     ],
   },
   test: {

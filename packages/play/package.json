@@ -1,0 +1,34 @@
+{
+  "name": "@ai-reality/play",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Session de jeu : incarner un personnage (cœur sans interface + interface terminal)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "ai-reality-play": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ai-reality/engine": "workspace:*",
+    "@ai-reality/llm-anthropic": "workspace:*",
+    "@ai-reality/storage-memory": "workspace:*",
+    "@ai-reality/testkit": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.3"
+  }
+}

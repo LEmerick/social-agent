@@ -16,7 +16,8 @@
     "format:check": "prettier --check .",
     "test": "turbo run test",
     "test:unit": "vitest run",
-    "test:live": "vitest run --config vitest.live.config.ts"
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "play": "turbo run build --filter=@ai-reality/play... --output-logs=errors-only && node packages/play/dist/cli.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

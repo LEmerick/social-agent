@@ -81,6 +81,25 @@ importers:
         specifier: ^5.0.3
         version: 5.0.3(@types/node@26.6.4)(vite@8.3.2(@types/node@26.6.4)(jiti@2.7.0))
 
+  packages/play:
+    dependencies:
+      '@ai-reality/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@ai-reality/llm-anthropic':
+        specifier: workspace:*
+        version: link:../llm-anthropic
+      '@ai-reality/storage-memory':
+        specifier: workspace:*
+        version: link:../storage-memory
+      '@ai-reality/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+    devDependencies:
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@26.6.4)(vite@8.3.2(@types/node@26.6.4)(jiti@2.7.0))
+
   packages/storage-memory:
     dependencies:
       '@ai-reality/engine':
