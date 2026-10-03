@@ -4,6 +4,7 @@
 import type { CharacterStatus } from '../ports/storage.js';
 import type { EffectRecord, EventRecord, SceneRecord, UtteranceRecord } from '../state/journal.js';
 import type { Id } from '../state/types.js';
+import type { EpochMetrics } from './metrics.js';
 
 export type Phase = 'init' | 'plan' | 'ticks' | 'economy' | 'memory' | 'close';
 
@@ -16,6 +17,8 @@ export interface EngineEvents {
   event: { readonly event: EventRecord };
   'effect.applied': { readonly effect: EffectRecord };
   'character.status': { readonly characterId: Id; readonly from: CharacterStatus; readonly to: CharacterStatus };
+  /** Durées par phase, appels LLM, jetons et coût estimé de l'époque ; émis juste avant `epoch.completed`. */
+  'epoch.metrics': { readonly metrics: EpochMetrics };
   'epoch.completed': { readonly epochId: Id };
 }
 

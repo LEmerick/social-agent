@@ -1,5 +1,6 @@
 import type { EffectRecord, EpochJournal, KnowledgeEdge, TickBatch } from '@ai-reality/engine';
-import { type Db, cmp, copy, duplicate, notFound, require_ } from './db.js';
+import { DomainError } from '@ai-reality/engine';
+import { type Db, checkEdge, cmp, copy, duplicate, notFound, overlaps, require_ } from './db.js';
 
 function put<T extends { id: string }>(map: Map<string, T>, record: T, what: string): void {
   if (map.has(record.id)) throw duplicate(`${what} ${record.id}`);
@@ -29,6 +30,14 @@ export function commitTick(db: Db, batch: TickBatch): void {
   for (const p of batch.presencesOpened) {
     require_(db.characters.has(p.characterId), `Personnage ${p.characterId}`);
     if (p.sceneId !== null) require_(db.scenes.has(p.sceneId), `Scène ${p.sceneId}`);
+    for (const other of db.presences.values()) {
+      if (other.epochId === p.epochId && other.characterId === p.characterId && overlaps(other, p)) {
+        throw new DomainError(
+          'PRESENCE_OVERLAP',
+          `Présence en chevauchement (contrainte d'exclusion presence_no_overlap) : ${p.id} et ${other.id}`,
+        );
+      }
+    }
     put(db.presences, p, 'Présence');
   }
   for (const i of batch.interactions) {
@@ -43,11 +52,13 @@ export function commitTick(db: Db, batch: TickBatch): void {
     require_(db.characters.has(d.characterId), `Personnage ${d.characterId}`);
     put(db.decisions, d, 'Décision');
   }
+  const seqs = new Set<number>();
+  if (batch.events.length > 0) {
+    for (const o of db.events.values()) if (db.epochs.get(o.epochId)?.worldId === epoch.worldId) seqs.add(o.seq);
+  }
   for (const e of batch.events) {
-    const taken = [...db.events.values()].some(
-      (o) => o.seq === e.seq && db.epochs.get(o.epochId)?.worldId === epoch.worldId,
-    );
-    if (taken) throw duplicate(`Event seq ${String(e.seq)}`);
+    if (seqs.has(e.seq)) throw duplicate(`Event seq ${String(e.seq)}`);
+    seqs.add(e.seq);
     put(db.events, e, 'Event');
   }
   for (const e of batch.effects) {
@@ -71,6 +82,7 @@ export function commitTick(db: Db, batch: TickBatch): void {
   for (const r of batch.relationships) {
     require_(db.characters.has(r.sourceId), `Personnage ${r.sourceId}`);
     require_(db.characters.has(r.targetId), `Personnage ${r.targetId}`);
+    checkEdge(r);
     db.relationships.set(`${r.sourceId}>${r.targetId}`, { worldId: epoch.worldId, edge: copy(r) });
   }
   for (const s of batch.characterStates) {

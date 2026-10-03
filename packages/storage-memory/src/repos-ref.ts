@@ -19,6 +19,7 @@ export function refRepos(db: Db): RefRepos {
           db.worlds.set(world.id, copy(world));
         }),
       findById: (id) => later(() => copy(db.worlds.get(id))),
+      list: () => later(() => [...db.worlds.values()].sort((a, b) => cmp(a.name, b.name) || cmp(a.id, b.id)).map(copy)),
     },
 
     seasons: {

@@ -60,7 +60,10 @@ describe('contraintes Postgres', () => {
       ...emptyTickBatch(EPOCH, 0),
       presencesOpened: [presence(fixedId(0x72, 1), 0, 5), presence(fixedId(0x72, 2), 3, null)],
     };
-    await expect(storage.tx((s) => s.journal.commitTick(batch))).rejects.toThrow(/presence_no_overlap|exclusion/i);
+    await expect(storage.tx((s) => s.journal.commitTick(batch))).rejects.toMatchObject({
+      code: 'PRESENCE_OVERLAP',
+      message: expect.stringMatching(/presence_no_overlap|exclusion/i),
+    });
   });
 
   it('des segments contigus ou de personnages différents sont acceptés', async () => {
@@ -75,15 +78,19 @@ describe('contraintes Postgres', () => {
 
   it('trust = 120 est rejeté par le CHECK', async () => {
     const edge = { ...defaultEdge(C.sarah, C.alexandre), trust: 120 };
-    await expect(storage.tx((s) => s.relationships.upsert(IDS.world, [edge]))).rejects.toThrow(
-      /relationship_axes_range|check/i,
-    );
+    await expect(storage.tx((s) => s.relationships.upsert(IDS.world, [edge]))).rejects.toMatchObject({
+      code: 'CONSTRAINT_VIOLATION',
+      message: expect.stringMatching(/relationship_axes_range|check/i),
+    });
   });
 
   it('une relation d’un personnage avec lui-même est rejetée', async () => {
-    await expect(storage.tx((s) => s.relationships.upsert(IDS.world, [defaultEdge(C.sarah, C.sarah)]))).rejects.toThrow(
-      /relationship_not_self|check/i,
-    );
+    await expect(
+      storage.tx((s) => s.relationships.upsert(IDS.world, [defaultEdge(C.sarah, C.sarah)])),
+    ).rejects.toMatchObject({
+      code: 'CONSTRAINT_VIOLATION',
+      message: expect.stringMatching(/relationship_not_self|check/i),
+    });
   });
 });
 

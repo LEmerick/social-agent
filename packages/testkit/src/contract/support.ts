@@ -12,7 +12,10 @@ export interface StorageHarness {
 export type HarnessRef = () => StorageHarness;
 
 /** Vérifie qu'une promesse échoue avec une `DomainError` du code attendu. */
-export async function expectCode(promise: Promise<unknown>, code: 'DUPLICATE' | 'NOT_FOUND'): Promise<void> {
+export async function expectCode(
+  promise: Promise<unknown>,
+  code: 'DUPLICATE' | 'NOT_FOUND' | 'PRESENCE_OVERLAP' | 'CONSTRAINT_VIOLATION',
+): Promise<void> {
   const failure = await promise.then(
     () => undefined,
     (e: unknown) => e,

@@ -1,4 +1,8 @@
-/** SimState « Palmiers » minimal pour les tests purs (le testkit dépend du moteur, pas l'inverse). */
+/**
+ * SimState « Palmiers » minimal pour les tests purs, identifiants en clair (`'alexandre'`, `'salon'`).
+ * Les tests qui n'en dépendent pas utilisent la fixture du testkit : `palmiersFixture()` ci-dessous.
+ */
+import { IDS, aSimState } from '@ai-reality/testkit';
 import { simIdFactory } from '../../src/core/sim-ids.js';
 import type { IdFactory } from '../../src/core/id.js';
 import type { SceneContext } from '../../src/rules/types.js';
@@ -115,3 +119,41 @@ export const opt = (action: string, targetId: string | null = null, over: Record
   locationId: null,
   ...over,
 });
+
+/** Les identifiants de la fixture du testkit, par prénom en minuscules. */
+export const P = IDS.characters;
+
+/**
+ * La fixture du testkit (`aSimState()`) ramenée à ce que supposent les tests purs : aucune relation, aucun fait,
+ * tout le monde au salon au tick 3 de l'époque 0. Remplace `palmiersState()` pour les tests qui lisent les personnages
+ * par `P.alexandre`…
+ */
+export function palmiersFixture(
+  opts: { rules?: Partial<SeasonRules>; traits?: Record<string, Record<string, number>>; seed?: string } = {},
+): SimState {
+  return aSimState((readonly) => {
+    // Les états de test sont mutables : on lève seulement les `readonly` de surface du type de domaine.
+    const state = readonly as unknown as {
+      world: { seed: string };
+      season: { rules: SeasonRules };
+      epoch: { id: string; number: number };
+      tick: number;
+      relationships: Record<string, unknown>;
+      facts: Record<string, unknown>;
+      knowledge: Record<string, unknown>;
+      characters: Record<string, { slug: string; traits: Record<string, number> }>;
+      positions: Record<string, unknown>;
+    };
+    state.relationships = {};
+    state.facts = {};
+    state.knowledge = {};
+    state.epoch = { id: 'epoch-0', number: 0 };
+    state.tick = 3;
+    if (opts.seed) state.world.seed = opts.seed;
+    state.season.rules = { ...state.season.rules, ...opts.rules };
+    for (const [id, character] of Object.entries(state.characters)) {
+      character.traits = { ...character.traits, ...(opts.traits?.[id] ?? opts.traits?.[character.slug]) };
+      state.positions[id] = { kind: 'at', locationId: IDS.locations.salon, zoneId: null };
+    }
+  });
+}

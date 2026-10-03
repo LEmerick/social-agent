@@ -41,6 +41,10 @@ model RelationshipSnapshot {
   alliance     Float        @db.DoublePrecision
   extraAxes    Json         @map("extra_axes")
   acquaintance Acquaintance
+  interactionCount       Int      @default(0) @map("interaction_count")
+  firstMetEventId        String?  @map("first_met_event_id") @db.Uuid
+  lastInteractionEventId String?  @map("last_interaction_event_id") @db.Uuid
+  labels                 String[] @default([])
 
   epoch Epoch @relation(fields: [epochId], references: [id])
 

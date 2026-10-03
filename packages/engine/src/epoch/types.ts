@@ -13,6 +13,7 @@ import type { PresenceRole } from '../scene/formation.js';
 import type { SceneRecord, TickBatch } from '../state/journal.js';
 import type { Id, SimState, Volume } from '../state/types.js';
 import type { EngineBus, Phase } from './bus.js';
+import type { EpochMetrics } from './metrics.js';
 
 /** Un `TickBatch` que les hooks remplissent : mêmes champs, tableaux modifiables. */
 export type MutableTickBatch = {
@@ -100,6 +101,8 @@ export interface EpochResult {
   /** Premier tick joué par cette exécution (0 sauf reprise). */
   readonly firstTick: number;
   readonly ticksPerEpoch: number;
+  /** Durée par phase, ticks joués, appels LLM, jetons et coût estimé. Aussi émis sur le bus (`epoch.metrics`). */
+  readonly metrics: EpochMetrics;
 }
 
 export interface EpochRun {

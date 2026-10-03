@@ -14,11 +14,12 @@
 import { DomainError } from '../core/errors.js';
 import { HeuristicOutcomeModel } from '../decision/heuristic-outcome.js';
 import { type ActionOption, type OutcomeModel, optionKey } from '../decision/ports.js';
-import type { SceneMember, TickContext, TickHook } from '../epoch/types.js';
+import type { SceneMember, SceneView, TickContext, TickHook } from '../epoch/types.js';
 import { FORMAT_ACTIONS, dispatchFormatAction } from '../formats/dispatch.js';
 import { absorb, busyOf } from '../formats/hook-kit.js';
 import { withFormatContext } from '../formats/scene-context.js';
 import { betrayalEffects, provenanceSummary, refreshSightings } from '../knowledge/index.js';
+import { runLockstep } from '../llm/lockstep.js';
 import { actionDef } from '../rules/catalog.js';
 import { availableOptions } from '../rules/options.js';
 import type { ActionCategory, ActionDef, SceneContext } from '../rules/types.js';
@@ -47,6 +48,13 @@ export interface InteractionDeps {
   readonly dialogue?: DialogueGenerator;
   /** Utilisé quand le scheduler n'a pas d'`OutcomeModel` (défaut : `HeuristicOutcomeModel`). */
   readonly fallbackOutcome?: OutcomeModel;
+  /**
+   * Les scènes du tick tournent comme des coroutines en pas de course (`llm/lockstep.ts`) : leurs appels LLM sont en
+   * vol en même temps (si le `LLMPort` est un `BudgetedLlm`), et tout ce qui lit ou écrit l'état s'exécute dans un ordre
+   * indépendant de l'ordre d'arrivée des réponses. Défaut : faux (une scène après l'autre). Sans appel LLM, les deux
+   * modes écrivent exactement le même journal.
+   */
+  readonly parallelScenes?: boolean;
 }
 
 type InteractionType = InteractionRecord['type'];
@@ -89,7 +97,7 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
     const log: CarryLog = new Map();
     refreshSightings(state, ctx.scenes);
 
-    for (const view of ctx.scenes) {
+    const playScene = async (view: SceneView): Promise<void> => {
       const participants = view.members.filter((m) => m.role === 'participant');
       const sceneOf = (members: readonly SceneMember[]): SceneContext => ({
         members: members.map((m) => ({
@@ -284,7 +292,11 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
         ).filter((o) => o.action === 'eavesdrop');
         await play(member.characterId, options, true);
       }
-    }
+    };
+
+    const views = ctx.scenes;
+    if (deps.parallelScenes) await runLockstep(views.map((view) => () => playScene(view)));
+    else for (const view of views) await playScene(view);
   };
 }
 

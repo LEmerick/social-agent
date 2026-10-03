@@ -86,7 +86,7 @@ async function load(s: StorageTx, worldId: Id, seasonNumber: number, options: Lo
     throw new DomainError('NOT_FOUND', `Saison ${String(seasonNumber)} introuvable dans le monde ${worldId}`);
   const rules = mergeSeasonRules(season.rules);
 
-  const [locations, zones, routes, characters, goals, relationships, facts, knowledge, states, events] =
+  const [locations, zones, routes, characters, goals, relationships, facts, knowledge, states, lastSeq] =
     await Promise.all([
       s.locations.listByWorld(worldId),
       s.zones.listByWorld(worldId),
@@ -97,7 +97,7 @@ async function load(s: StorageTx, worldId: Id, seasonNumber: number, options: Lo
       s.facts.listByWorld(worldId),
       s.knowledge.listByWorld(worldId),
       s.characterStates.latest(worldId),
-      s.journal.eventsOfWorld(worldId),
+      s.journal.maxSeq(worldId),
     ]);
 
   const epochNumber = options.epochNumber ?? (await nextEpochNumber(s, states));
@@ -148,8 +148,6 @@ async function load(s: StorageTx, worldId: Id, seasonNumber: number, options: Lo
 
   const relationshipEdges: Record<string, RelationshipEdge> = {};
   for (const r of relationships) relationshipEdges[relKey(r.sourceId, r.targetId)] = r;
-
-  const lastSeq = events.reduce((max, e) => Math.max(max, e.seq), 0);
 
   return {
     world: { id: world.id, seed: world.seed, config: mergeWorldConfig(world.config) },

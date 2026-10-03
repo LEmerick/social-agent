@@ -75,6 +75,7 @@ async function guardRaw<T>(op: () => Promise<T>): Promise<T> {
       const state = (error.meta as { code?: string } | undefined)?.code;
       if (state === '23505') throw new DomainError('DUPLICATE', 'Souvenir déjà présent');
       if (state === '23503') throw new DomainError('NOT_FOUND', 'Rattachement à un enregistrement inexistant');
+      if (state === '23514') throw new DomainError('CONSTRAINT_VIOLATION', 'Contrainte CHECK violée');
     }
     throw error;
   }

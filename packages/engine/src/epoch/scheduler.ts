@@ -15,8 +15,10 @@ import type { CharacterStatus, StoragePort } from '../ports/storage.js';
 import { type CharacterStateRecord, type SceneRecord, emptyTickBatch } from '../state/journal.js';
 import { type TransitZones, loadSimStateWithRuntime, runtimeOf } from '../state/load-runtime.js';
 import type { Id, SimState } from '../state/types.js';
+import type { LlmMeter } from '../llm/budget.js';
 import { EngineBus } from './bus.js';
 import { type RunScope, createTickContext, idsOf, rngOf } from './context.js';
+import { type EpochMetrics, PhaseTimer } from './metrics.js';
 import { Timeline, sortedIds } from './timeline.js';
 import type { EpochHooks, EpochResult, EpochRun, EpochRunOptions, MutableTickBatch, TickHook } from './types.js';
 
@@ -25,6 +27,13 @@ export interface EpochSchedulerDeps {
   readonly decision: DecisionPolicy;
   readonly outcome?: OutcomeModel;
   readonly hooks?: EpochHooks;
+  /**
+   * Compteur des appels LLM (`BudgetedLlm`) : remis à zéro au début de chaque exécution, lu à la clôture pour
+   * `EpochMetrics.llm`. Sans lui, les métriques n'ont pas de volet LLM.
+   */
+  readonly meter?: LlmMeter;
+  /** Horloge des métriques, en millisecondes (défaut : `performance.now`). */
+  readonly now?: () => number;
 }
 
 export interface EpochScheduler {
@@ -57,29 +66,35 @@ interface Started {
 }
 
 async function execute(deps: EpochSchedulerDeps, bus: EngineBus, target: Target): Promise<EpochResult> {
+  const timer = new PhaseTimer(deps.now ?? (() => performance.now()));
+  timer.enter('init');
+  deps.meter?.beginEpoch();
   const started = await initialise(deps, bus, target);
   const { scope } = started;
   const { ticksPerEpoch } = scope.state.world.config;
+  let metrics: EpochMetrics;
   try {
     let planBatch = started.planBatch;
     if (planBatch) {
+      timer.enter('plan');
       bus.emit('phase.started', { epoch: scope.epochNumber, phase: 'plan' });
       scope.state.tick = 0;
       await deps.hooks?.plan?.(createTickContext(scope, 'plan', 0, planBatch));
     }
 
+    timer.enter('ticks');
     bus.emit('phase.started', { epoch: scope.epochNumber, phase: 'ticks' });
     for (let tick = started.firstTick; tick < ticksPerEpoch; tick++) {
       await playTick(deps, scope, tick, tick === 0 && planBatch ? planBatch : newBatch(scope.epochId, tick));
       planBatch = null;
     }
 
-    await closeEpoch(deps, scope);
+    metrics = await closeEpoch(deps, scope, timer, ticksPerEpoch - started.firstTick);
   } catch (error) {
     await deps.storage.tx((s) => s.epochs.setStatus(scope.epochId, 'failed')).catch(() => undefined);
     throw error;
   }
-  return { epochId: scope.epochId, number: scope.epochNumber, firstTick: started.firstTick, ticksPerEpoch };
+  return { epochId: scope.epochId, number: scope.epochNumber, firstTick: started.firstTick, ticksPerEpoch, metrics };
 }
 
 async function initialise(deps: EpochSchedulerDeps, bus: EngineBus, target: Target): Promise<Started> {
@@ -147,6 +162,7 @@ async function initialise(deps: EpochSchedulerDeps, bus: EngineBus, target: Targ
     epochId: epoch.id,
     epochNumber: epoch.number,
     idFactories: new Map(),
+    writtenStates: new Map(),
   };
   return { scope, firstTick, planBatch: firstTick === 0 ? newBatch(epoch.id, 0) : null };
 }
@@ -193,7 +209,12 @@ async function playTick(
 }
 
 /** Phases 5 à 7 : un lot de clôture (tick = `ticksPerEpoch`) commité avec le snapshot et le statut `completed`. */
-async function closeEpoch(deps: EpochSchedulerDeps, scope: RunScope): Promise<void> {
+async function closeEpoch(
+  deps: EpochSchedulerDeps,
+  scope: RunScope,
+  timer: PhaseTimer,
+  ticks: number,
+): Promise<EpochMetrics> {
   const { state, timeline, bus } = scope;
   const end = state.world.config.ticksPerEpoch;
   state.tick = end;
@@ -205,6 +226,7 @@ async function closeEpoch(deps: EpochSchedulerDeps, scope: RunScope): Promise<vo
     ['close', deps.hooks?.close],
   ];
   for (const [phase, hook] of phases) {
+    timer.enter(phase);
     bus.emit('phase.started', { epoch: scope.epochNumber, phase });
     await hook?.(createTickContext(scope, phase, end, batch));
   }
@@ -221,29 +243,43 @@ async function closeEpoch(deps: EpochSchedulerDeps, scope: RunScope): Promise<vo
     await s.snapshots.saveRelationships(scope.epochId, relationships);
     await s.epochs.setStatus(scope.epochId, 'completed');
   });
+  const metrics: EpochMetrics = {
+    epochId: scope.epochId,
+    number: scope.epochNumber,
+    ...timer.finish(),
+    ticks,
+    llm: deps.meter?.snapshot() ?? null,
+  };
   publish(scope, batch, openBefore);
   bus.emit('tick.committed', { epoch: scope.epochNumber, tick: end });
+  bus.emit('epoch.metrics', { metrics });
   bus.emit('epoch.completed', { epochId: scope.epochId });
+  return metrics;
 }
 
-/** Une ligne `character_state` par personnage, avec les données de reprise. */
+/**
+ * Les lignes `character_state` à écrire : une par personnage, avec les données de reprise, mais seulement celles qui
+ * ont changé depuis la dernière écriture de l'exécution (la première écriture les couvre toutes).
+ */
 function characterStates(scope: RunScope): CharacterStateRecord[] {
-  const { state, epochId, timeline } = scope;
+  const { state, epochId, timeline, writtenStates } = scope;
   return sortedIds(state).flatMap((characterId) => {
     const character = state.characters[characterId];
     if (!character) return [];
-    return [
-      {
-        characterId,
-        epochId,
-        stats: { ...character.stats },
-        credits: character.credits,
-        status: character.status,
-        mood: { ...character.mood },
-        scores: { ...character.scores },
-        runtime: runtimeOf(state, characterId, timeline.transitZones),
-      },
-    ];
+    const record: CharacterStateRecord = {
+      characterId,
+      epochId,
+      stats: { ...character.stats },
+      credits: character.credits,
+      status: character.status,
+      mood: { ...character.mood },
+      scores: { ...character.scores },
+      runtime: runtimeOf(state, characterId, timeline.transitZones),
+    };
+    const json = JSON.stringify(record);
+    if (writtenStates.get(characterId) === json) return [];
+    writtenStates.set(characterId, json);
+    return [record];
   });
 }
 

@@ -32,10 +32,10 @@ export function toRelationshipEdge(r: RelationshipRow | SnapshotRow): Relationsh
     alliance: r.alliance,
     extraAxes: asNumberRecord(r.extraAxes),
     acquaintance: r.acquaintance,
-    interactionCount: 'interactionCount' in r ? r.interactionCount : 0,
-    labels: 'labels' in r ? [...r.labels] : [],
-    firstMetEventId: 'firstMetEventId' in r ? r.firstMetEventId : null,
-    lastInteractionEventId: 'lastInteractionEventId' in r ? r.lastInteractionEventId : null,
+    interactionCount: r.interactionCount,
+    labels: [...r.labels],
+    firstMetEventId: r.firstMetEventId,
+    lastInteractionEventId: r.lastInteractionEventId,
   };
 }
 

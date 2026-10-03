@@ -12,6 +12,12 @@ import type { Prisma } from '@prisma/client';
 import { stateData, relationshipData, toEffectRecord, toEventRecord } from './mappers.js';
 import { type Db, asRecord, cmp, guard, toJson, toNullableJson } from './support.js';
 
+const groupByTickEnd = (closed: readonly { id: string; tickEnd: number }[]): Map<number, string[]> => {
+  const groups = new Map<number, string[]>();
+  for (const c of closed) groups.set(c.tickEnd, [...(groups.get(c.tickEnd) ?? []), c.id]);
+  return groups;
+};
+
 /** Écrit tout un tick. Les fermetures passent avant les ouvertures (contrainte d'exclusion sur `presence`). */
 export async function commitTick(db: Db, batch: TickBatch): Promise<void> {
   const epoch = await db.epoch.findUnique({ where: { id: batch.epochId }, select: { id: true, worldId: true } });
@@ -19,11 +25,17 @@ export async function commitTick(db: Db, batch: TickBatch): Promise<void> {
   const worldId = epoch.worldId;
 
   await guard(async () => {
-    for (const c of batch.scenesClosed) {
-      await db.scene.update({ where: { id: c.id }, data: { tickEnd: c.tickEnd } });
+    // Un `updateMany` par valeur de `tickEnd` : la plupart des fermetures d'un tick partagent la même.
+    for (const [tickEnd, ids] of groupByTickEnd(batch.scenesClosed)) {
+      const { count } = await db.scene.updateMany({ where: { id: { in: ids } }, data: { tickEnd } });
+      if (count !== ids.length)
+        throw new DomainError('NOT_FOUND', `Scène à fermer introuvable parmi ${ids.join(', ')}`);
     }
-    for (const c of batch.presencesClosed) {
-      await db.presence.update({ where: { id: c.id }, data: { tickEnd: c.tickEnd } });
+    for (const [tickEnd, ids] of groupByTickEnd(batch.presencesClosed)) {
+      const { count } = await db.presence.updateMany({ where: { id: { in: ids } }, data: { tickEnd } });
+      if (count !== ids.length) {
+        throw new DomainError('NOT_FOUND', `Présence à fermer introuvable parmi ${ids.join(', ')}`);
+      }
     }
 
     await db.scene.createMany({ data: batch.scenesOpened.map((s) => ({ ...s })) });

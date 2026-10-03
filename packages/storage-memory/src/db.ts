@@ -90,7 +90,20 @@ export const emptyDb = (): Db => ({
   formats: emptyFormatTables(),
 });
 
-export const cloneDb = (db: Db): Db => structuredClone(db);
+const shallow = <T extends object>(table: T): T => {
+  const copied: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(table)) {
+    copied[key] = value instanceof Map ? new Map(value) : Array.isArray(value) ? [...(value as unknown[])] : value;
+  }
+  return copied as T;
+};
+
+/**
+ * Copie de travail d'une transaction : chaque table est dupliquée (références des enregistrements partagées). Les
+ * enregistrements ne sont jamais modifiés en place, seulement remplacés (`set`) ou insérés par copie profonde, et les
+ * lectures renvoient des copies : annuler une transaction revient donc à jeter ces tables.
+ */
+export const cloneDb = (db: Db): Db => ({ ...shallow(db), formats: shallow(db.formats) });
 
 /** Copie profonde : aucune référence interne ne s'échappe du stockage. */
 export const copy = <T>(value: T): T => structuredClone(value);
@@ -110,3 +123,21 @@ export function require_(present: boolean, what: string): void {
 
 /** Comparaison de chaînes indépendante de la locale (même ordre que les index binaires). */
 export const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
+const AXES_0_100 = ['trust', 'rivalry', 'respect', 'fear', 'attraction', 'alliance'] as const;
+
+/** Les `CHECK` de la table `relationship` : axes bornés (l'affection va de -100 à 100), jamais de relation à soi-même. */
+export function checkEdge(edge: RelationshipEdge): void {
+  const outOfRange =
+    AXES_0_100.some((axis) => edge[axis] < 0 || edge[axis] > 100) || edge.affection < -100 || edge.affection > 100;
+  if (outOfRange || edge.sourceId === edge.targetId) {
+    throw new DomainError(
+      'CONSTRAINT_VIOLATION',
+      'Contrainte CHECK violée (relationship_axes_range ou relationship_not_self)',
+    );
+  }
+}
+
+/** Intervalle semi-ouvert `[start, end)` ; `end` nul = sans fin (comme `int4range(tick_start, tick_end)`). */
+export const overlaps = (a: PresenceRecord, b: PresenceRecord): boolean =>
+  a.tickStart < (b.tickEnd ?? Infinity) && b.tickStart < (a.tickEnd ?? Infinity);

@@ -35,7 +35,7 @@ import { absorb, formatContextOf, inGameIds, markBusy, stageFormat } from './hoo
 import { expireItems } from './inventory-use.js';
 import { holdersOf, resolveMissions } from './missions.js';
 import { emitEvent, emptyOutput } from './output.js';
-import { loadFormatState } from './persist.js';
+import { loadFormatState, seedFormatBaseline } from './persist.js';
 import type { SeasonFormat } from './season-format.js';
 import { DEFAULT_SEASON_EPOCHS, needsSetup, setupFormat } from './setup.js';
 import {
@@ -60,7 +60,9 @@ export interface FormatHookDeps {
 async function ensureLoaded(ctx: TickContext, deps: FormatHookDeps): Promise<void> {
   const { state } = ctx;
   if (state.ext[FORMAT_EXT_KEY] === undefined) {
-    setFormatState(state, await loadFormatState(deps.storage, state.season.id));
+    const loaded = await loadFormatState(deps.storage, state.season.id);
+    setFormatState(state, loaded);
+    seedFormatBaseline(state, loaded);
   }
   const rules = state.season.rules as { enabledActions: readonly string[] };
   const missing = deps.format.actions.enable.filter((a) => !rules.enabledActions.includes(a));

@@ -19,6 +19,8 @@ export interface RunScope {
   readonly epochNumber: number;
   /** Fabriques d'identifiants, par (tick, flux) : un même flux ne repart jamais de zéro dans un tick. */
   readonly idFactories: Map<string, IdFactory>;
+  /** Dernière ligne `character_state` écrite par cette exécution (JSON) : seules les lignes modifiées sont réécrites. */
+  readonly writtenStates: Map<Id, string>;
 }
 
 export function idsOf(scope: RunScope, tick: number, stream: string): IdFactory {

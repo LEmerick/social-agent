@@ -55,9 +55,9 @@ export async function openContext(args: Parsed, io: CliIo): Promise<Context> {
   if (!url) throw new CliError('Aucune base : passez --db <url>, définissez DATABASE_URL ou utilisez --memory.');
   const prisma = new PrismaClient({ datasourceUrl: url });
   try {
-    const worlds = await prisma.world.findMany({ select: { id: true, name: true }, orderBy: { createdAt: 'asc' } });
-    const worldId = pick(worlds, args.world);
     const storage = prismaStorage(prisma);
+    const worlds = await storage.tx((s) => s.worlds.list());
+    const worldId = pick(worlds, args.world);
     const world = await storage.tx((s) => s.worlds.findById(worldId));
     if (!world) throw new CliError(`Monde ${worldId} introuvable.`);
     return { storage, world, worldId, seasonNumber: args.season, memory: false, close: () => prisma.$disconnect() };

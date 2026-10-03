@@ -296,6 +296,66 @@ export function journalContract(h: HarnessRef): void {
       expect((await h().storage.tx((s) => s.journal.read(EPOCH_1.id))).events).toEqual(later.events);
     });
 
+    it('un second segment de présence qui chevauche le premier ⇒ PRESENCE_OVERLAP, et le lot est annulé', async () => {
+      await withEpoch(h);
+      const batch = tick3Batch();
+      await h().storage.tx((s) => s.journal.commitTick(batch));
+      const [open] = batch.presencesOpened;
+      if (!open) throw new Error('lot sans présence');
+      const overlapping = {
+        ...emptyTickBatch(EPOCH_0.id, 5),
+        presencesOpened: [
+          { ...open, id: fixedId(0x72, 40), tickStart: 5, tickEnd: null, kind: 'offstage' as const, sceneId: null },
+        ],
+      };
+      await expectCode(
+        h().storage.tx((s) => s.journal.commitTick(overlapping)),
+        'PRESENCE_OVERLAP',
+      );
+      const journal = await h().storage.tx((s) => s.journal.read(EPOCH_0.id));
+      expect(journal.presences).toEqual(batch.presencesOpened);
+    });
+
+    it('un segment fermé puis un contigu dans le même lot est accepté (fermetures avant ouvertures)', async () => {
+      await withEpoch(h);
+      const batch = tick3Batch();
+      await h().storage.tx((s) => s.journal.commitTick(batch));
+      const [open] = batch.presencesOpened;
+      if (!open) throw new Error('lot sans présence');
+      const next = {
+        ...emptyTickBatch(EPOCH_0.id, 5),
+        presencesClosed: [{ id: open.id, tickEnd: 5 }],
+        presencesOpened: [
+          { ...open, id: fixedId(0x72, 41), tickStart: 5, tickEnd: null, kind: 'offstage' as const, sceneId: null },
+        ],
+      };
+      await h().storage.tx((s) => s.journal.commitTick(next));
+    });
+
+    it('une relation hors bornes ou d’un personnage avec lui-même ⇒ CONSTRAINT_VIOLATION', async () => {
+      await withEpoch(h);
+      const before = await h().storage.tx((s) => s.relationships.listByWorld(IDS.world));
+      await expectCode(
+        h().storage.tx((s) =>
+          s.relationships.upsert(IDS.world, [{ ...defaultEdge(C.sarah, C.alexandre), trust: 120 }]),
+        ),
+        'CONSTRAINT_VIOLATION',
+      );
+      await expectCode(
+        h().storage.tx((s) => s.relationships.upsert(IDS.world, [defaultEdge(C.sarah, C.sarah)])),
+        'CONSTRAINT_VIOLATION',
+      );
+      expect(await h().storage.tx((s) => s.relationships.listByWorld(IDS.world))).toEqual(before);
+    });
+
+    it('maxSeq renvoie le plus grand seq du monde, 0 sans event', async () => {
+      await withEpoch(h);
+      expect(await h().storage.tx((s) => s.journal.maxSeq(IDS.world))).toBe(0);
+      await h().storage.tx((s) => s.epochs.insert(EPOCH_1));
+      await h().storage.tx((s) => s.journal.commitTick(tick3Batch()));
+      expect(await h().storage.tx((s) => s.journal.maxSeq(IDS.world))).toBe(2);
+    });
+
     it('read d’une époque sans journal renvoie des listes vides', async () => {
       await withEpoch(h);
       const journal = await h().storage.tx((s) => s.journal.read(EPOCH_0.id));
@@ -326,6 +386,22 @@ export function journalContract(h: HarnessRef): void {
         [C.alexandre, EPOCH_1.id, 70],
         [C.sarah, EPOCH_0.id, 100],
       ]);
+    });
+
+    it('un instantané garde toute l’arête : compteur, événements, étiquettes', async () => {
+      await withEpoch(h);
+      const full = {
+        ...defaultEdge(C.alexandre, C.sarah),
+        trust: 61.5,
+        extraAxes: { loyaute: 3 },
+        acquaintance: 'close' as const,
+        interactionCount: 7,
+        firstMetEventId: fixedId(0x76, 11),
+        lastInteractionEventId: fixedId(0x76, 12),
+        labels: ['allié secret', 'rival'],
+      };
+      await h().storage.tx((s) => s.snapshots.saveRelationships(EPOCH_0.id, [full]));
+      expect(await h().storage.tx((s) => s.snapshots.relationships(EPOCH_0.id))).toEqual([full]);
     });
 
     it('les instantanés de relations se relisent triés ; une nouvelle sauvegarde remplace la précédente', async () => {
