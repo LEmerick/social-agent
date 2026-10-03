@@ -12,6 +12,7 @@ model Fact {
   originEventId String? @map("origin_event_id") @db.Uuid
   inventedById  String? @map("invented_by_id") @db.Uuid
 
+  world       World       @relation(fields: [worldId], references: [id])
   subject     Character?  @relation("FactSubject", fields: [subjectId], references: [id])
   object      Character?  @relation("FactObject", fields: [objectId], references: [id])
   inventedBy  Character?  @relation("FactInventor", fields: [inventedById], references: [id])
@@ -31,7 +32,7 @@ model Knowledge {
   parentKnowledgeId String?         @map("parent_knowledge_id") @db.Uuid
   learnedEpoch      Int             @map("learned_epoch")
   learnedTick       Int             @map("learned_tick")
-  confidence        Float           @db.Real
+  confidence        Float
   belief            Belief          @default(believes)
 
   character Character   @relation("KnowledgeOwner", fields: [characterId], references: [id])
@@ -64,6 +65,7 @@ model Memory {
   event     Event?    @relation(fields: [eventId], references: [id])
 
   @@index([characterId, salience(sort: Desc)])
+  @@index([aboutCharacterIds], type: Gin, map: "memory_about_gin")
   @@map("memory")
 }
 

@@ -73,6 +73,10 @@ export interface CharacterRecord {
   readonly firstName: string;
   readonly lastName: string | null;
   readonly age: number | null;
+  readonly gender: string | null;
+  readonly origin: string | null;
+  readonly backstory: string | null;
+  readonly speechStyle: string | null;
   readonly autonomy: CharacterAutonomy;
   readonly status: CharacterStatus;
   readonly traits: Readonly<Record<string, number>>;
