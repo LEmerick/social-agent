@@ -12,6 +12,7 @@ import {
   type KnowledgeEdge,
   type LedgerRecord,
   type LocationRecord,
+  type MemoryRecord,
   type PresenceRecord,
   type RelationshipEdge,
   type RouteEdge,
@@ -54,6 +55,7 @@ export interface Db {
   /** Clé : epochId. */
   snapshots: Map<string, RelationshipEdge[]>;
   llmCalls: Map<string, LlmCallRecord>;
+  memories: Map<string, MemoryRecord>;
 }
 
 export const emptyDb = (): Db => ({
@@ -81,6 +83,7 @@ export const emptyDb = (): Db => ({
   characterStates: new Map(),
   snapshots: new Map(),
   llmCalls: new Map(),
+  memories: new Map(),
 });
 
 export const cloneDb = (db: Db): Db => structuredClone(db);

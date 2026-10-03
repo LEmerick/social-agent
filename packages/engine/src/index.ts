@@ -41,3 +41,5 @@ export { loadSimStateWithRuntime } from './state/load-runtime.js';
 export * from './rules/index.js';
 export * from './knowledge/index.js';
 export * from './interaction/index.js';
+export * from './memory/index.js';
+export * from './ports/embedding.js';
