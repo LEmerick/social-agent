@@ -161,3 +161,24 @@ describe('session de jeu', () => {
     expect(session.relations().every((r) => r.name !== 'Sarah')).toBe(true);
   });
 });
+
+describe('connaissances', () => {
+  it('annonce ce que le joueur apprend quand on lui confie un secret', async () => {
+    const secret = IDS.facts.sarahSecret;
+    const session = await createPlaySession({
+      characterSlug: 'alexandre',
+      npc: scriptedNpcs({ [C.sarah]: { 1: { ...option('share_secret', C.alexandre), factId: secret } } }, C.alexandre),
+    });
+    const { summary } = await playEpoch(session, (r) => {
+      if (r.kind === 'destination') return r.options.find((o) => o.label.includes('Aller : Salon'))?.n ?? 1;
+      if (r.kind === 'outcome') return r.options.find((o) => o.label === 'Y croire')?.n ?? 1;
+      return 1;
+    });
+    const learned = session.log().filter((e) => e.kind === 'learned');
+    expect(learned).toHaveLength(1);
+    expect(learned[0]?.factId).toBe(secret);
+    expect(learned[0]?.text).toBe('Tu apprends que Sarah a déjà participé à une autre émission (Sarah te l’a dit).');
+    expect(summary.learned).toBe(1);
+    expect(session.knowledge().map((k) => k.factId)).toContain(secret);
+  });
+});

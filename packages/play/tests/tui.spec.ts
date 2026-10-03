@@ -73,6 +73,16 @@ describe('interface terminal (sans TTY)', () => {
     expect(out).toContain('Raccourcis : r relations');
   });
 
+  it('répond aux raccourcis en pleine partie avec une entrée redirigée, et rappelle la demande', async () => {
+    const { out } = await run(['1', '7', 'r', 'k', 'l', 'q'], { NO_COLOR: '1' });
+    const afterRelations = out.slice(out.indexOf('── Relations'));
+    expect(afterRelations).toContain('── Ce que je sais');
+    expect(afterRelations).toContain('── Journal');
+    // La demande est réaffichée après chaque raccourci : 1 fois à l’ouverture + 3 rappels.
+    expect(out.split('Que fais-tu ?').length - 1).toBe(4);
+    expect(out.trimEnd().endsWith('À bientôt.')).toBe(true);
+  });
+
   it('quitte proprement quand l’entrée se termine', async () => {
     const { out, code } = await run(['1']);
     expect(code).toBe(0);

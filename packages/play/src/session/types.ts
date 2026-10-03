@@ -53,6 +53,8 @@ export interface PlayerStatus {
   readonly stats: Readonly<Record<string, number>>;
   readonly credits: number;
   readonly place: string | null;
+  /** Identifiant du lieu courant (pour la carte). */
+  readonly placeId: Id | null;
   readonly zone: string | null;
   readonly moving: boolean;
   readonly present: readonly string[];
@@ -103,4 +105,9 @@ export interface PlayClock {
   readonly tick: number;
   readonly ticksPerEpoch: number;
   readonly time: string;
+}
+
+export interface PlayMap {
+  readonly locations: readonly { readonly id: Id; readonly name: string; readonly zones: readonly string[] }[];
+  readonly routes: readonly { readonly from: Id; readonly to: Id; readonly minutes: number }[];
 }
