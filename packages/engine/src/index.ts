@@ -31,3 +31,5 @@ export {
 export { type RoutePlan, shortestRoute } from './world/shortest-route.js';
 export { type WorldService, type WorldSetupResult, createWorldService } from './world/world-service.js';
 export { type LoadOptions, DEFAULT_STATS, loadSimState, mergeSeasonRules, mergeWorldConfig } from './state/load.js';
+export * from './decision/ports.js';
+export { EngineBus, type EngineEvents, type Phase } from './epoch/bus.js';
