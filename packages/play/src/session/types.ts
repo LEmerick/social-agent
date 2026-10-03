@@ -30,7 +30,8 @@ export interface PlayRequest {
   readonly context: PlayRequestContext;
 }
 
-export type PlayEventKind = 'heard' | 'seen' | 'arrived' | 'left' | 'learned' | 'relation' | 'credits' | 'status';
+export type PlayEventKind =
+  'heard' | 'acted' | 'seen' | 'arrived' | 'left' | 'learned' | 'relation' | 'credits' | 'status';
 
 /** Ce que le personnage perçoit. Aucun champ ne porte d’information hors de sa perception. */
 export interface PlayEvent {

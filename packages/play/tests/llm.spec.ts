@@ -41,7 +41,7 @@ describe('session avec LLM', () => {
     expect(requests.some((r) => r.kind === 'outcome')).toBe(true);
     const texts = session
       .log()
-      .filter((e) => e.kind === 'heard')
+      .filter((e) => e.kind === 'heard' || e.kind === 'acted')
       .map((e) => e.text);
     expect(texts.some((t) => t.includes('« Bonjour tout le monde ! »'))).toBe(true);
     // Les consignes et raisons internes du LLM ne sont jamais montrées.

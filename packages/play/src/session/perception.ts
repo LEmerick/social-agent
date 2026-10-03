@@ -133,11 +133,20 @@ export class Perception {
     };
   }
 
+  /** Annonce tout de suite où est le joueur et qui il voit ; idempotent (appelé avant chaque demande et en fin de tick). */
+  refreshPresence(state: Readonly<SimState>, tick: number): void {
+    this.#presence(state, tick);
+  }
+
   #presence(state: Readonly<SimState>, tick: number): void {
     const me = state.positions[this.#playerId];
     const placeId = me?.kind === 'at' ? me.locationId : null;
     const now = new Set(visibleOthers(state, this.#playerId));
     if (placeId !== this.#placeId) {
+      if (placeId === null && this.#placeId !== null) {
+        const from = state.locations[this.#placeId]?.name ?? '?';
+        this.#emit({ kind: 'left', tick, text: `Tu quittes : ${from}.` });
+      }
       if (placeId !== null) {
         const names = [...now].map((id) => nameOf(state, id));
         const where = state.locations[placeId]?.name ?? '?';
@@ -178,11 +187,16 @@ export class Perception {
         for (const u of batch.utterances.filter((x) => x.interactionId === interaction.id)) {
           const youSay = u.speakerId === me;
           const who = youSay ? 'Toi' : nameOf(state, u.speakerId);
-          this.#emit({ ...base, kind: 'heard', speakerId: u.speakerId, text: `${who} : « ${u.text} »` });
+          this.#emit({
+            ...base,
+            kind: youSay ? 'acted' : 'heard',
+            speakerId: u.speakerId,
+            text: `${who} : « ${u.text} »`,
+          });
         }
       } else {
         const text = narrate(state, me, interaction.action, actorId, targetId, interaction.outcome);
-        this.#emit({ ...base, kind: 'heard', text });
+        this.#emit({ ...base, kind: mine.role === 'speaker' ? 'acted' : 'heard', text });
       }
       return;
     }

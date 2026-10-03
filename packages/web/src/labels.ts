@@ -37,6 +37,7 @@ export const STATUS_LABELS: Readonly<Record<string, string>> = {
 
 export const KIND_LABELS: Readonly<Record<string, string>> = {
   heard: 'Entendu',
+  acted: 'Toi',
   seen: 'Vu',
   arrived: 'Arrivée',
   left: 'Départ',

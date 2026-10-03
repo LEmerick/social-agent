@@ -160,6 +160,8 @@ export async function createPlaySession(options: PlaySessionOptions): Promise<Pl
           reject(new DomainError('SESSION_CLOSED', 'La partie est terminée'));
           return;
         }
+        // Ce qui s'est passé dans ce tick (arrivée, départ, présents) est annoncé avant de poser la question.
+        if (question.kind !== 'destination') perception.refreshPresence(state, state.tick);
         requestCount += 1;
         const request: PlayRequest = {
           id: `req-${String(requestCount)}`,

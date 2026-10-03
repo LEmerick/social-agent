@@ -263,6 +263,10 @@ kbd {
   letter-spacing: 0.04em;
   padding-top: 0.15rem;
 }
+.ev-acted .text {
+  color: var(--accent);
+  font-weight: 500;
+}
 .ev-heard .text {
   color: var(--heard);
   font-weight: 500;

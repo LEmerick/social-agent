@@ -37,7 +37,7 @@ describe('perception : le joueur ne perçoit que ce qu’il peut percevoir', () 
             const interaction = journal.interactions.find((i) => i.id === e.interactionId);
             expect(interaction, `interaction ${e.interactionId}`).toBeDefined();
             const mine = interaction?.participants.some((p) => p.characterId === playerId) ?? false;
-            if (e.kind === 'heard') expect(mine).toBe(true);
+            if (e.kind === 'heard' || e.kind === 'acted') expect(mine).toBe(true);
             if (e.kind === 'seen') expect(mine).toBe(false);
           }
           // Ce qu’il apprend est dans sa connaissance ; rien d’autre n’évoque un fait.
@@ -58,7 +58,7 @@ describe('perception : le joueur ne perçoit que ce qu’il peut percevoir', () 
         const heardIds = new Set(
           session
             .log()
-            .filter((e) => e.kind === 'heard')
+            .filter((e) => e.kind === 'heard' || e.kind === 'acted')
             .map((e) => e.interactionId),
         );
         for (const i of journal.interactions) {
