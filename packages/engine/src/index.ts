@@ -47,3 +47,4 @@ export * from './agent/index.js';
 export * from './formats/index.js';
 export * from './decision/model/index.js';
 export * from './balance/index.js';
+export * from './replay/index.js';
