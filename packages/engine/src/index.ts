@@ -43,3 +43,4 @@ export * from './knowledge/index.js';
 export * from './interaction/index.js';
 export * from './memory/index.js';
 export * from './ports/embedding.js';
+export * from './agent/index.js';
