@@ -40,7 +40,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/tests/**/*.ts', 'eslint.config.js', 'vitest.config.ts'],
+    files: ['**/tests/**/*.ts', 'eslint.config.js', 'vitest.config.ts', 'vitest.live.config.ts'],
     ...tseslint.configs.disableTypeChecked,
   },
 );

@@ -1,0 +1,44 @@
+{
+  "model": "scripted-alliance",
+  "promptHash": "8594cc989a48b3a7ccb4e86fd8a9383fec27391ae455c9e7bbd2c8d71b5bc6ab",
+  "purpose": "verify",
+  "request": {
+    "maxTokens": 800,
+    "messages": [
+      {
+        "content": "Action : propose_alliance (initiateur : Alexandre, cible : Sarah).\nIssue décidée : accepted_conditional (la cible accepte, mais à des conditions qu’elle énonce).\nÉchange :\nAlexandre : Sarah, toi et moi on irait plus loin ensemble. Une alliance, ça te dit ?\nSarah : D’accord, Alexandre, mais je veux des garanties : pas de coup dans le dos.",
+        "role": "user"
+      }
+    ],
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "coherent": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "coherent",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "system": {
+      "stable": "Tu es le vérificateur d’une télé-réalité fictive. On te donne l’action tentée, l’issue DÉJÀ décidée et la retranscription de l’échange.\nDis si l’échange aboutit bien à cette issue : les répliques doivent y mener et ne pas la contredire (par exemple, un refus net ne vérifie pas une acceptation).\nRéponds uniquement par un JSON : {\"coherent\":true|false,\"reason\":\"<une phrase>\"}.",
+      "variable": null
+    },
+    "temperature": null,
+    "tier": "fast"
+  },
+  "response": {
+    "text": "{\"coherent\":true,\"reason\":\"La proposition aboutit à une acceptation conditionnelle.\"}"
+  },
+  "usage": {
+    "cachedTokens": 0,
+    "inputTokens": 0,
+    "outputTokens": 0
+  }
+}

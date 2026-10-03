@@ -36,9 +36,27 @@ export interface DialogueInput {
   readonly rng: Rng;
 }
 
+/**
+ * Résultat de la vérification d'un dialogue LLM (JSON simple). L'intégrateur peut le placer dans
+ * `InteractionRecord.classification` (action-catalog.md §6).
+ */
+export interface DialogueVerification {
+  /** Le dialogue retenu aboutit à l'issue tirée. Faux après repli sur un dialogue résumé. */
+  readonly verified: boolean;
+  /** Générations tentées (1 = bon du premier coup). */
+  readonly attempts: number;
+  readonly fallback: boolean;
+  /** Raisons d'incohérence données par le vérificateur à chaque échec. */
+  readonly reasons: readonly string[];
+  /** Faits cités par un locuteur qui ne les connaît pas : ignorés. */
+  readonly ignoredReveals: readonly string[];
+}
+
 export interface DialogueResult {
   readonly mode: 'dialogue' | 'summarized';
   readonly utterances: readonly UtteranceDraft[];
+  /** Renseigné par les générateurs qui vérifient leur dialogue (`LlmDialogue`) ; absent pour `SummaryDialogue`. */
+  readonly verification?: DialogueVerification;
 }
 
 export interface DialogueGenerator {
