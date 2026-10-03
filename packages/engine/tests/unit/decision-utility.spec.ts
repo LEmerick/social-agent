@@ -107,7 +107,8 @@ describe('UtilityDecisionPolicy', () => {
     const pooled = (pLoyal + pDisloyal) / 2;
     const z = (pDisloyal - pLoyal) / Math.sqrt(pooled * (1 - pooled) * (2 / draws));
     expect(z).toBeGreaterThan(3);
-  });
+    // 8000 décisions complètes : quelques secondes, davantage sur une machine chargée.
+  }, 30_000);
 
   it('la directive oriente : forbid exclut, prefer et biais d’action/cible relèvent l’utilité', async () => {
     const state = palmiersAtSalon((s) => {
