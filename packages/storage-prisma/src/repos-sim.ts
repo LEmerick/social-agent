@@ -131,6 +131,10 @@ export function simRepos(db: Db): SimRepos {
         });
         return rows.map(toEventRecord);
       },
+      async maxSeq(worldId) {
+        const { _max } = await db.event.aggregate({ where: { worldId }, _max: { seq: true } });
+        return _max.seq === null ? 0 : Number(_max.seq);
+      },
       async reweighScoreEntries(epochId, weights) {
         if (!(await db.epoch.findUnique({ where: { id: epochId }, select: { id: true } }))) {
           throw new DomainError('NOT_FOUND', `Époque ${epochId} introuvable`);

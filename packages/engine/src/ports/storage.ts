@@ -234,6 +234,8 @@ export interface JournalRepository {
   read(epochId: string): Promise<EpochJournal>;
   /** Tous les events du monde, triés par `seq` (rejeu). */
   eventsOfWorld(worldId: string): Promise<EventRecord[]>;
+  /** Plus grand `seq` des events du monde (0 s'il n'y en a aucun) : sans charger les events. */
+  maxSeq(worldId: string): Promise<number>;
   /**
    * Remplace le poids de chaque entrée de score de l'époque par `weights[entry.score]` (changement de pondération
    * de la saison). Les `impact` ne changent jamais. Époque inconnue ⇒ `NOT_FOUND`.

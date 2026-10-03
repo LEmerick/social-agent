@@ -15,3 +15,5 @@ export { audience, formScenes, presenceRole } from '../scene/index.js';
 export type { Listener, PresenceRole, SceneAssignment, SceneFormation } from '../scene/index.js';
 export { ScriptedDecisionPolicy, type ScriptedPolicyScript } from '../decision/scripted-policy.js';
 export { loadSimStateWithRuntime } from '../state/load-runtime.js';
+export { type EpochMetrics, PHASES, PhaseTimer } from './metrics.js';
+export { budgetedDecision, budgetedDialogue, budgetedHook, budgetedOutcome } from './budget-fallback.js';

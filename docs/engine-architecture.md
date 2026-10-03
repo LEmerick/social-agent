@@ -358,6 +358,24 @@ Leviers :
 - scènes indépendantes d'un même tick exécutées **en parallèle** (aucun personnage n'est partagé entre deux scènes),
 - un modèle rapide (Haiku) pour l'évaluateur et le small talk, un modèle plus capable pour les conversations à fort enjeu.
 
+### Parallélisme, budget et métriques (M8b)
+
+- **Scènes en parallèle** (`interactionHook({ parallelScenes: true })`) : chaque scène est une coroutine ; un jeton circule
+  en anneau (`llm/lockstep.ts`) et passe à la scène suivante pendant qu'un appel LLM est en vol. Les appels de plusieurs
+  scènes partent donc ensemble, mais tout code qui lit ou écrit l'état s'exécute dans un ordre qui ne dépend que de la
+  structure des scènes, jamais de l'ordre d'arrivée des réponses : mêmes ids, même lot, même journal à n'importe quelle
+  concurrence. Le jeton ne circule que si le LLM passe par `BudgetedLlm` ; sinon les scènes s'exécutent l'une après l'autre.
+- **`BudgetedLlm`** (`llm/budget.ts`) enveloppe un `LLMPort` : concurrence maximale, budget de jetons et/ou de coût par
+  époque (tarifs en configuration), métriques. Budget épuisé ⇒ `LLM_BUDGET_EXCEEDED`, et les enveloppes de
+  `epoch/budget-fallback.ts` (`budgetedDecision`, `budgetedOutcome`, `budgetedDialogue`, `budgetedHook`) reprennent sans
+  LLM : politique de repli (visible dans `decision.policy`), dialogue résumé (`verification.fallback`), phases 2 et 6 sautées.
+  Avec une seule requête à la fois le repli est déterministe ; au-delà, il peut dépendre de l'ordre d'arrivée des
+  réponses (le journal garde la trace de chaque repli).
+- **Métriques** : `EpochResult.metrics` et l'événement de bus `epoch.metrics` portent la durée de chaque phase, les ticks
+  joués et, avec `meter` (le `BudgetedLlm`), appels, échecs, refus, replis, jetons, coût estimé et pic de concurrence.
+- **Persistance** : le `FormatState` n'est écrit que pour les entités modifiées (`formats/persist.ts`, `FormatDelta`),
+  les lignes `character_state` aussi ; `journal.maxSeq` remplace le chargement de tous les events pour numéroter les events.
+
 ### Traçabilité des appels LLM (table `llm_call`)
 
 Schéma : [`05-evenements.prisma`](../packages/storage-prisma/prisma/schema/05-evenements.prisma) (modèle `LlmCall`) : objectif (`plan`, `speak`,

@@ -20,7 +20,8 @@
     "play": "turbo run build --filter=@ai-reality/play... --output-logs=errors-only && node packages/play/dist/cli.js",
     "web": "pnpm -F @ai-reality/web dev",
     "ai-reality": "turbo run build --filter=@ai-reality/cli... --output-logs=errors-only && node packages/cli/dist/main.js",
-    "play:server": "turbo run build --filter=@ai-reality/play... --output-logs=errors-only && node packages/play/dist/server.js"
+    "play:server": "turbo run build --filter=@ai-reality/play... --output-logs=errors-only && node packages/play/dist/server.js",
+    "bench": "vitest bench --run"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

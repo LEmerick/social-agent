@@ -1,5 +1,5 @@
 import type { KnowledgeEdge, StorageTx } from '@ai-reality/engine';
-import { type Db, cmp, copy, duplicate, later, notFound, require_ } from './db.js';
+import { type Db, checkEdge, cmp, copy, duplicate, later, notFound, require_ } from './db.js';
 import { commitTick, insertKnowledge, readJournal } from './journal.js';
 
 type SimRepos = Pick<
@@ -19,6 +19,7 @@ export function simRepos(db: Db): SimRepos {
           for (const e of edges) {
             require_(db.characters.has(e.sourceId), `Personnage ${e.sourceId}`);
             require_(db.characters.has(e.targetId), `Personnage ${e.targetId}`);
+            checkEdge(e);
             db.relationships.set(`${e.sourceId}>${e.targetId}`, { worldId, edge: copy(e) });
           }
         }),
@@ -115,6 +116,13 @@ export function simRepos(db: Db): SimRepos {
             .filter((e) => db.epochs.get(e.epochId)?.worldId === worldId)
             .sort((a, b) => a.seq - b.seq)
             .map(copy),
+        ),
+      maxSeq: (worldId) =>
+        later(() =>
+          [...db.events.values()].reduce(
+            (max, e) => (db.epochs.get(e.epochId)?.worldId === worldId ? Math.max(max, e.seq) : max),
+            0,
+          ),
         ),
       reweighScoreEntries: (epochId, weights) =>
         later(() => {

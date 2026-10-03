@@ -6,9 +6,30 @@ import { defaultEdge } from '../state/apply-effect.js';
 import { relKey, type Id, type RelationshipEdge, type SimState } from '../state/types.js';
 import type { Precondition, SceneContext, SceneParticipant } from './types.js';
 
-/** Arête source→cible, ou arête par défaut si elles ne se connaissent pas encore (sans l'insérer). */
-export const relOf = (state: Readonly<SimState>, sourceId: Id, targetId: Id): Readonly<RelationshipEdge> =>
-  state.relationships[relKey(sourceId, targetId)] ?? defaultEdge(sourceId, targetId);
+const MAX_DEFAULT_EDGES = 10_000;
+/** Arêtes par défaut figées, une par paire : lire une relation absente n'alloue plus. */
+const defaultEdges = new Map<string, Readonly<RelationshipEdge>>();
+
+const frozenDefault = (key: string, sourceId: Id, targetId: Id): Readonly<RelationshipEdge> => {
+  const known = defaultEdges.get(key);
+  if (known) return known;
+  const fresh = defaultEdge(sourceId, targetId);
+  Object.freeze(fresh.extraAxes);
+  Object.freeze(fresh.labels);
+  Object.freeze(fresh);
+  if (defaultEdges.size >= MAX_DEFAULT_EDGES) defaultEdges.clear();
+  defaultEdges.set(key, fresh);
+  return fresh;
+};
+
+/**
+ * Arête source→cible, ou arête par défaut si elles ne se connaissent pas encore (sans l'insérer). L'arête par défaut est
+ * partagée et figée : la lire n'alloue rien, et toute tentative de la modifier échoue au lieu de fuir d'un appel à l'autre.
+ */
+export const relOf = (state: Readonly<SimState>, sourceId: Id, targetId: Id): Readonly<RelationshipEdge> => {
+  const key = relKey(sourceId, targetId);
+  return state.relationships[key] ?? frozenDefault(key, sourceId, targetId);
+};
 
 export const memberOf = (ctx: SceneContext, characterId: Id): SceneParticipant | undefined =>
   ctx.members.find((m) => m.characterId === characterId);

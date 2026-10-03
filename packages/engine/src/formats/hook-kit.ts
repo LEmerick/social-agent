@@ -3,7 +3,7 @@ import type { MutableTickBatch, TickContext } from '../epoch/types.js';
 import { FORMAT_EXT_KEY, peekFormat } from '../state/format-state.js';
 import { goalRecordOf } from '../state/journal.js';
 import { relKey, type Id, type SimState } from '../state/types.js';
-import { FORMAT_BATCH_KEY } from './persist.js';
+import { FORMAT_BATCH_KEY, FORMAT_DELTA_INDEX, type FormatDelta, diffFormat, mergeFormatDeltas } from './persist.js';
 import { appendOutput, type FormatContext, type FormatOutput } from './output.js';
 
 /** Contexte des services pour le tick courant (flux d'identifiants `format`, partagé par tous les hooks du tick). */
@@ -57,19 +57,17 @@ export const inGameIds = (state: Readonly<SimState>): Id[] =>
 /** Le format est actif sur cet état (un `FormatState` est rangé dans `ext`). */
 export const hasFormat = (state: Readonly<SimState>): boolean => state.ext[FORMAT_EXT_KEY] !== undefined;
 
-const STAGED_KEY = 'format_staged';
-
 /**
- * Dépose le `FormatState` courant dans le lot du tick (`ext['format']`, voir `withFormatCommit`) quand il a changé depuis
- * le dernier dépôt de l'exécution. À appeler en fin de tick, après tous les hooks de format.
+ * Dépose le `FormatState` courant dans le lot du tick (`ext['format']`, voir `withFormatCommit`) avec le delta des entités
+ * modifiées depuis le dernier dépôt de l'exécution. À appeler en fin de tick, après tous les hooks de format.
  */
 export function stageFormat(ctx: TickContext): void {
   if (!hasFormat(ctx.state)) return;
   const fs = peekFormat(ctx.state);
-  const json = JSON.stringify(fs);
-  if (ctx.state.ext[STAGED_KEY] === json) return;
-  ctx.state.ext[STAGED_KEY] = json;
-  ctx.batch.ext = { ...ctx.batch.ext, [FORMAT_BATCH_KEY]: [fs] };
+  const delta = diffFormat(ctx.state, fs);
+  if (!delta) return;
+  const previous = ctx.batch.ext[FORMAT_BATCH_KEY]?.[FORMAT_DELTA_INDEX] as FormatDelta | undefined;
+  ctx.batch.ext = { ...ctx.batch.ext, [FORMAT_BATCH_KEY]: [fs, previous ? mergeFormatDeltas(previous, delta) : delta] };
 }
 
 const BUSY_KEY = 'format_busy';
