@@ -1,6 +1,7 @@
 import { type StoragePort, type StorageTx } from '@ai-reality/engine';
 import { type Db, cloneDb, emptyDb } from './db.js';
 import { formatRepos } from './repos-formats.js';
+import { visualRepos } from './repos-visuals.js';
 import { llmRepos } from './repos-llm.js';
 import { memoryRepos } from './repos-memory.js';
 import { refRepos } from './repos-ref.js';
@@ -27,6 +28,7 @@ export function createMemoryStorage(): StoragePort & { reset(): void } {
           ...simRepos(working),
           ...llmRepos(working),
           ...memoryRepos(working),
+          ...visualRepos(working),
           ...formatRepos(working),
         });
         committed = working;

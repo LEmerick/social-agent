@@ -12,5 +12,7 @@ export function simulationReader(storage: StoragePort): SimulationReader {
     eventsOfWorld: (worldId) => storage.tx((s) => s.journal.eventsOfWorld(worldId)),
     characters: (worldId) => storage.tx((s) => s.characters.listByWorld(worldId)),
     locations: (worldId) => storage.tx((s) => s.locations.listByWorld(worldId)),
+    goals: (worldId) => storage.tx((s) => s.goals.listByWorld(worldId)),
+    characterVisuals: (worldId) => storage.tx((s) => s.characterVisuals.listByWorld(worldId)),
   };
 }

@@ -379,6 +379,25 @@ export interface FormatRuntimeRepository {
   load(seasonId: string): Promise<FormatRuntime>;
 }
 
+/** Version visuelle d'un personnage (table `character_visual`) : références d'images, voix, garde-robe. */
+export interface CharacterVisualRecord {
+  readonly characterId: string;
+  readonly version: number;
+  readonly referenceImages: readonly string[];
+  readonly voiceId: string | null;
+  readonly wardrobeId: string | null;
+  readonly visualDescription: string | null;
+  /** Première époque (numéro) où cette version s'applique. */
+  readonly validFromEpoch: number;
+}
+
+export interface CharacterVisualRepository {
+  /** `DUPLICATE` si (personnage, version) existe ; `NOT_FOUND` si le personnage n'existe pas. */
+  insert(visual: CharacterVisualRecord): Promise<void>;
+  /** Versions visuelles des personnages du monde, triées par `characterId`, puis `version`. */
+  listByWorld(worldId: string): Promise<CharacterVisualRecord[]>;
+}
+
 export interface StorageTx {
   readonly worlds: WorldRepository;
   readonly seasons: SeasonRepository;
@@ -403,6 +422,7 @@ export interface StorageTx {
   readonly votes: VoteRepository;
   readonly schedule: ScheduleRepository;
   readonly formatRuntime: FormatRuntimeRepository;
+  readonly characterVisuals: CharacterVisualRepository;
 }
 
 export interface StoragePort {

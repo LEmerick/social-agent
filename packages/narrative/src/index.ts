@@ -63,8 +63,9 @@ export {
   confessionalQuestion,
   createConfessionalService,
 } from './confessional.js';
-export { storageContextProvider } from './context.js';
-export { type CharacterVisualInfo, type SceneSheet, type SheetWorld, sceneSheetsOf } from './sheets.js';
+export { relationshipsBefore, storageContextProvider } from './context.js';
+export { type CharacterVisualInfo, type SceneSheet, type SheetWorld, sceneSheetsOf, visualAt } from './sheets.js';
+export { personaProvider } from './persona.js';
 export {
   type Episode,
   type NarrativeEngine,

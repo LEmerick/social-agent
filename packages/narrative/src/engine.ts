@@ -6,6 +6,7 @@ import { collectDigest } from './collect.js';
 import type { ConfessionalService } from './confessional.js';
 import { episodeId, rowsOfScript, scriptOfRecord } from './episode-rows.js';
 import type { EpisodeRecord, NarrativeStoragePort } from './ports.js';
+import { type SceneSheet, sceneSheetsOf } from './sheets.js';
 import { selectMoments } from './select.js';
 import type { EpisodeLine, EpisodeScript } from './script.js';
 import { type EpisodeValidator, createEpisodeValidator } from './validator.js';
@@ -48,6 +49,8 @@ export interface NarrativeEngine {
   /** Regroupe par chaînes `caused_by_event_id` ; `openArcs` (de `digest.openArcs`) permet de prolonger un arc ouvert. */
   buildArcs(moments: readonly Moment[], openArcs?: readonly NarrativeArc[]): Promise<NarrativeArc[]>;
   produce(epochId: Id): Promise<Episode>;
+  /** Fiches `Scene` du Video Engine, avec les versions visuelles lues dans `character_visual`. */
+  sceneSheets(episode: EpisodeRecord): Promise<SceneSheet[]>;
 }
 
 export function createNarrativeEngine(deps: NarrativeEngineDeps): NarrativeEngine {
@@ -55,6 +58,15 @@ export function createNarrativeEngine(deps: NarrativeEngineDeps): NarrativeEngin
   const validatorFor = deps.validatorFor ?? ((worldId: Id) => createEpisodeValidator({ sim: storage.sim, worldId }));
 
   const engine: NarrativeEngine = {
+    async sceneSheets(episode) {
+      const [characters, locations, visuals] = await Promise.all([
+        storage.sim.characters(episode.worldId),
+        storage.sim.locations(episode.worldId),
+        storage.sim.characterVisuals(episode.worldId),
+      ]);
+      return sceneSheetsOf(episode, { characters, locations, visuals });
+    },
+
     collect: (epochId) => collectDigest(storage, epochId),
 
     select: (digest, opts) => Promise.resolve(selectMoments(digest, opts)),
