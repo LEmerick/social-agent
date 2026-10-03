@@ -21,3 +21,4 @@ export {
   PALMIERS_ZONES,
   palmiersRelationships,
 } from './fixtures/palmiers.js';
+export * from './llm/index.js';

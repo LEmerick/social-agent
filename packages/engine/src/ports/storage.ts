@@ -8,6 +8,7 @@
  *
  * Les lectures de listes renvoient un ordre stable : celui précisé sur chaque méthode.
  */
+import type { LlmCallRecord } from '../llm/record.js';
 import type {
   CharacterStateRecord,
   DecisionRecord,
@@ -230,6 +231,15 @@ export interface SnapshotRepository {
   relationships(epochId: string): Promise<RelationshipEdge[]>;
 }
 
+export interface LlmCallRepository {
+  /** `DomainError('DUPLICATE', …)` si l'identifiant existe déjà. */
+  insert(record: LlmCallRecord): Promise<void>;
+  /** Appels de même `prompt_hash`, triés par date de création puis identifiant. */
+  findByPromptHash(promptHash: string): Promise<LlmCallRecord[]>;
+  /** Appels d'une époque, triés par date de création puis identifiant. */
+  listByEpoch(epochId: string): Promise<LlmCallRecord[]>;
+}
+
 export interface StorageTx {
   readonly worlds: WorldRepository;
   readonly seasons: SeasonRepository;
@@ -246,6 +256,7 @@ export interface StorageTx {
   readonly journal: JournalRepository;
   readonly characterStates: CharacterStateRepository;
   readonly snapshots: SnapshotRepository;
+  readonly llmCalls: LlmCallRepository;
 }
 
 export interface StoragePort {
