@@ -87,6 +87,22 @@ importers:
         specifier: ^5.0.3
         version: 5.0.3(@types/node@26.6.4)(vite@8.3.2(@types/node@26.6.4)(jiti@2.7.0))
 
+  packages/llm-openai:
+    dependencies:
+      '@ai-reality/engine':
+        specifier: workspace:*
+        version: link:../engine
+      openai:
+        specifier: ^7.27.0
+        version: 7.27.0(zod@4.6.5)
+    devDependencies:
+      '@ai-reality/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@26.6.4)(vite@8.3.2(@types/node@26.6.4)(jiti@2.7.0))
+
   packages/narrative:
     dependencies:
       '@ai-reality/engine':
@@ -117,6 +133,9 @@ importers:
       '@ai-reality/llm-anthropic':
         specifier: workspace:*
         version: link:../llm-anthropic
+      '@ai-reality/llm-openai':
+        specifier: workspace:*
+        version: link:../llm-openai
       '@ai-reality/storage-memory':
         specifier: workspace:*
         version: link:../storage-memory
@@ -955,6 +974,30 @@ packages:
 
   ohash@2.0.12:
     resolution: {integrity: sha512-65S/5gk9YSsaRjcyf7Nfa6h/d3E8/1gslpXfI4W7Dxn/oap8IKRuNT5VXkLQ1YFKIEg4apRY4Pj6aiwFzrDdmw==}
+
+  openai@7.27.0:
+    resolution: {integrity: sha512-QDo1FvnRDZn15YwGVOhT9vpyypDiLphkd/7a4mcURWf5upMoEetgA6o4DJeII+ZZkC6m6DvlilCwii3+ynDcTw==}
+    engines: {node: '>=22.0.0'}
+    peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      undici: '>=5 <9'
+      ws: ^8.21.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      undici:
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
 
   optionator@0.9.4:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
@@ -1900,6 +1943,10 @@ snapshots:
   obug@2.2.1: {}
 
   ohash@2.0.12: {}
+
+  openai@7.27.0(zod@4.6.5):
+    optionalDependencies:
+      zod: 4.6.5
 
   optionator@0.9.4:
     dependencies:

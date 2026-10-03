@@ -1,0 +1,30 @@
+{
+  "name": "@ai-reality/llm-openai",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Adaptateur LLMPort pour ChatGPT (SDK OpenAI, API Responses)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ai-reality/engine": "workspace:*",
+    "openai": "^7.27.0"
+  },
+  "devDependencies": {
+    "@ai-reality/testkit": "workspace:*",
+    "vitest": "^5.0.3"
+  }
+}

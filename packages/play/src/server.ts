@@ -13,7 +13,7 @@ import { randomUUID } from 'node:crypto';
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
 import type { LLMPort } from '@ai-reality/engine';
-import { anthropicLLM } from '@ai-reality/llm-anthropic';
+import { llmFromEnv } from './llm.js';
 import {
   PLAYABLE_CHARACTERS,
   type PlaySession,
@@ -81,8 +81,7 @@ const sse = (res: ServerResponse, event: string, data: unknown, id?: number): vo
 export function createPlayServer(options: PlayServerOptions = {}): Server & { closeAll(): void } {
   const env = options.env ?? process.env;
   const create = options.createSession ?? createPlaySession;
-  const key = env['ANTHROPIC_API_KEY'] ?? '';
-  const llm = options.llm ?? (key === '' ? undefined : anthropicLLM({ apiKey: key }));
+  const llm = options.llm ?? llmFromEnv(env);
   const sessions = new Map<string, Hosted>();
 
   const broadcast = (h: Hosted, event: string, data: unknown, id?: number): void => {

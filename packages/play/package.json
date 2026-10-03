@@ -26,6 +26,7 @@
   "dependencies": {
     "@ai-reality/engine": "workspace:*",
     "@ai-reality/llm-anthropic": "workspace:*",
+    "@ai-reality/llm-openai": "workspace:*",
     "@ai-reality/storage-memory": "workspace:*",
     "@ai-reality/testkit": "workspace:*"
   },

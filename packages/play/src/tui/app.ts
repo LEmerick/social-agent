@@ -4,7 +4,7 @@
  */
 import { createInterface } from 'node:readline';
 import type { LLMPort } from '@ai-reality/engine';
-import { anthropicLLM } from '@ai-reality/llm-anthropic';
+import { llmFromEnv } from '../llm.js';
 import { PLAYABLE_CHARACTERS, type PlaySession, type PlaySessionOptions, createPlaySession } from '../session/index.js';
 import { CLEAR_SCREEN, colorEnabled, createStyle } from './ansi.js';
 import {
@@ -96,8 +96,7 @@ export async function runPlayApp(options: PlayAppOptions): Promise<number> {
     if (slug === null) print(style.red(`« ${answer} » n’est pas un choix valide.`), '');
   }
 
-  const llm: LLMPort | undefined =
-    (env['ANTHROPIC_API_KEY'] ?? '') !== '' ? anthropicLLM({ apiKey: env['ANTHROPIC_API_KEY'] ?? '' }) : undefined;
+  const llm: LLMPort | undefined = llmFromEnv(env);
   const create = options.createSession ?? createPlaySession;
   let session: PlaySession;
   try {
