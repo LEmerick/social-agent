@@ -72,7 +72,7 @@ export function expandSchedule(format: SeasonFormat, epochs: number, ids: IdFact
       tickEnd: null,
       trigger: null,
       locationId: null,
-      participants: {},
+      participants: m.assign.to ? { characterSlugs: m.assign.to } : {},
       mandatory: true,
       announced: false,
       params: { mission: m.slug, ...(m.assign.random !== undefined ? { random: m.assign.random } : {}) },

@@ -30,7 +30,13 @@ export function withFormatContext(state: Readonly<SimState>, base: SceneContext,
     .sort();
 
   const open = Object.values(fs.voteSessions)
-    .filter((s) => s.result === null && s.kind !== 'public' && s.electorate.includes(actorId))
+    .filter(
+      (s) =>
+        s.result === null &&
+        s.kind !== 'public' &&
+        s.electorate.includes(actorId) &&
+        !fs.votes.some((v) => v.voteSessionId === s.id && v.voterId === actorId),
+    )
     .sort((a, b) => (a.id < b.id ? -1 : 1))[0];
   const voteUpcoming = Object.values(fs.scheduled).some(
     (s) => s.kind === 'council' && s.firedEventId === null && (s.epoch === null || s.epoch === epoch),

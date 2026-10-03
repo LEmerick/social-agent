@@ -17,6 +17,8 @@ export const ItemSpecSchema = z
     count: z.number().int().min(0).default(1),
     placement: z.enum(['hidden', 'visible', 'challenge_reward', 'held']).default('hidden'),
     difficulty: z.number().int().min(0).max(100).optional(),
+    /** Lieu de dépôt (slug) ; sans lui, tirage parmi les lieux publics. */
+    location: slug.optional(),
     effects: z.record(z.string(), z.unknown()).default({}),
     expires: z.union([z.literal('after_use'), z.object({ afterEpoch: z.number().int().min(0) }).strict()]).optional(),
     points_to: slug.optional(),
@@ -81,7 +83,12 @@ export const MissionSpecSchema = z
       .optional(),
     deadlineEpochOffset: z.number().int().min(0).optional(),
     assign: z
-      .object({ random: z.number().int().min(1).optional(), epoch: z.number().int().min(0).optional() })
+      .object({
+        random: z.number().int().min(1).optional(),
+        epoch: z.number().int().min(0).optional(),
+        /** Personnages visés (slugs) ; sans eux, tous les participants. */
+        to: z.array(slug).optional(),
+      })
       .strict()
       .optional(),
   })

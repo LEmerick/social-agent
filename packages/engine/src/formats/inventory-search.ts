@@ -119,7 +119,7 @@ export function searchLocation(state: SimState, fc: FormatContext, input: Search
 }
 
 /** Un indice désigne (`effects.points_to` = slug) l'emplacement des objets cachés de cette définition. */
-function revealTargets(
+export function revealTargets(
   state: SimState,
   fc: FormatContext,
   out: FormatOutput,
