@@ -42,6 +42,13 @@ export function tellPriority(state: Readonly<SimState>, learnerId: Id, allyId: I
   return Math.min(1, Math.max(0.05, raw - 0.15 * loyalty));
 }
 
+/** Lieu où `learnerId` voit `allyId` à l'instant : leur lieu commun, sinon `null` (dernier lieu connu : voir `agenda.ts`). */
+const sightingOf = (state: Readonly<SimState>, learnerId: Id, allyId: Id): Id | null => {
+  const a = state.positions[learnerId];
+  const b = state.positions[allyId];
+  return a?.kind === 'at' && b?.kind === 'at' && a.locationId === b.locationId ? a.locationId : null;
+};
+
 const inGame = (state: Readonly<SimState>, id: Id): boolean => {
   const c = state.characters[id];
   return c !== undefined && c.status !== 'eliminated' && c.status !== 'paused';
@@ -51,6 +58,7 @@ const inGame = (state: Readonly<SimState>, id: Id): boolean => {
  * Intention `tell` que `learnerId` formerait après avoir appris `fact` de `fromId` (null : témoin direct), ou `null`.
  * Allié candidat : en jeu, alliance ≥ 50 ou confiance ≥ 60, hors apprenant, émetteur, sujet du fait, et personnes
  * qui connaissent déjà le fait ou l'apprennent en même temps (`exclude`). On retient celui de plus haute priorité (à égalité, l'identifiant le plus petit).
+ * `locationId` = lieu où l'apprenant voit l'allié maintenant (sinon `null`) : c'est le dernier lieu connu de la cible.
  * Aucune intention si le fait est peu sensible, si l'apprenant en est le sujet ou ne le croit pas.
  */
 export function deferredTell(
@@ -79,7 +87,7 @@ export function deferredTell(
     targetId: best.id,
     goal: null,
     factId: fact.id,
-    locationId: null,
+    locationId: sightingOf(state, learnerId, best.id),
     priority: clamp01(best.priority),
   };
 }

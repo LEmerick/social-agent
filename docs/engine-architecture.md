@@ -278,6 +278,26 @@ Le champ `reveals` est central : si un agent divulgue un fait (`fact_id`), le mo
 
 Confiance à la transmission : `conf_reçue = conf_émetteur × f(trust(récepteur→émetteur))`.
 
+### 8.1 Propagation dans une interaction (phase 3.f, M4)
+
+Après la résolution d'une interaction (l'event existe), `interaction/propagation.ts` fait circuler les faits ; tout est écrit dans le lot du tick (`batch.facts`, `batch.knowledge`), `via_event_id` = event de l'interaction.
+
+| Source                                                                          | Effet                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Action notable (`propose_alliance`, `confide`, `insult`, `steal`…)              | Fait vrai « acteur prédicat cible », sensibilité = base de l'action décalée par le volume (chuchoté 0, caché +1, normal −1, fort −2). Acteur, cible et ceux qui **entendent** en sont témoins (`witnessed`) ; ceux qui ne font que **voir** n'apprennent rien. Action cachée : seul l'acteur, plus la cible si `detected`. |
+| `spread_rumor`, `lie`                                                           | Fait faux (`createRumor`, `invented_by` = acteur) transmis à la cible (`told`) et aux tiers qui entendent (`overheard`).                                                                                                                                                                                                   |
+| `revealedFactIds` des énoncés, fait de `share_secret` / `confront` / `accuse`   | Le locuteur doit connaître le fait, sinon il est **ignoré** (énoncé enregistré sans lui) et journalisé dans `interaction.classification.facts.ignored`. Sinon `transmit` au volume de l'énoncé : `told` pour l'adressé, `overheard` pour un tiers qui entend.                                                              |
+| Issue `believed` / `doubted` / `disbelieved` (`lie` : `detected`)               | Fixe la croyance du destinataire (`believes` / `doubts` / `disbelieves`) à la place de celle déduite de la confiance.                                                                                                                                                                                                      |
+| `eavesdrop` (observateur d'une autre zone du lieu, joué après les participants) | `undetected` : il apprend (`overheard`, `via_event_id` = event d'écoute) ce que la cible a dit ou entendu pendant ce tick ; `detected` : rien, effets de relation de la règle.                                                                                                                                             |
+
+Chaînage causal : `caused_by_event_id` d'une interaction qui porte un fait = l'event par lequel l'émetteur a appris ce fait (`via_event_id` de sa meilleure connaissance), à défaut l'event d'origine du fait. Une chaîne A → B → C → D donne E1 ← E2 ← E3 ← E4.
+
+**Intentions différées.** Un fait sensible (≥ 2) appris par un personnage ajoute une intention `tell` vers son meilleur allié (`deferredTell`) ; `locationId` = dernier lieu où il a vu cet allié (mis à jour à chaque tick où ils partagent une scène, `refreshSightings`). `AgendaDecisionPolicy` décore une politique : l'option `share_secret` d'une intention exécutable (la cible est dans la scène, ne connaît pas le fait) passe avant le choix de base ; la destination suit le dernier lieu connu. L'intention exécutée est retirée de l'agenda.
+
+**Confrontation (`confront_betrayal@1`).** `confront` / `accuse` au sujet d'un fait : la cible reçoit la provenance de l'accusateur (payload de l'event, plus une connaissance `told` dont la chaîne `parent_knowledge_id` remonte l'accusateur). Le traître est le premier à avoir raconté le fait dans cette chaîne, si le fait concerne la cible et qu'elle avait un lien avec lui (alliance > 0 ou confiance ≥ 60). Pour les issues `escalated` / `accepted` : cible→traître alliance à 0, rivalité +50 (étiquette `rival`), confiance −25, respect −10 ; traître→cible alliance à 0, rivalité +15, confiance −10.
+
+**Niveaux de connaissance (`acquaintance@1`).** `known_of` → `met` dès la première interaction avec conscience mutuelle → `acquainted` à 3 interactions → `close` à 8 interactions avec affection ≥ 20 et confiance ≥ 50 (axes de la source vers la cible). Un niveau ne redescend jamais.
+
 ---
 
 ## 9. Résolution : de la classification aux effects

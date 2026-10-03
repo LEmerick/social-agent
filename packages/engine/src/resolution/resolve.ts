@@ -22,6 +22,7 @@ import type {
   ScoreEntryRecord,
 } from '../state/journal.js';
 import { relKey, type Id, type RelationshipEdge, type SimState } from '../state/types.js';
+import { promoteAcquaintance } from './acquaintance.js';
 import { dailyCount, habituationFactor, habituationKey, HABITUATION_RULE } from './habituation.js';
 import { kitFor, type RuleCtx } from './kit.js';
 import { ruleFor } from './table.js';
@@ -37,6 +38,10 @@ export interface ResolveInput {
   /** Témoins de la scène (rôle `witness` dans l'event). */
   readonly witnessIds?: readonly Id[];
   readonly causedByEventId?: Id | null;
+  /** Champs ajoutés au payload de l'event (provenance d'une confrontation…) ; ne remplacent jamais les champs de base. */
+  readonly payload?: Readonly<Record<string, unknown>>;
+  /** Participants supplémentaires de l'event (rôle `subject` d'un fait, par exemple). */
+  readonly extraParticipants?: readonly EventParticipant[];
   /** Si fourni, les préconditions de l'action sont revérifiées avec ce contexte de scène. */
   readonly ctx?: SceneContext;
   /** Effets additionnels propres à la saison (par exemple sur des `extraAxes`), appliqués après les règles. */
@@ -92,6 +97,7 @@ export function resolveInteraction(state: SimState, input: ResolveInput, ids: Id
     type: rule.eventType,
     importance: rule.importance,
     payload: {
+      ...input.payload,
       action: def.id,
       outcome,
       targetId: option.targetId,
@@ -107,6 +113,12 @@ export function resolveInteraction(state: SimState, input: ResolveInput, ids: Id
       ...(input.witnessIds ?? [])
         .filter((w) => w !== actorId && w !== target?.id)
         .map((w): EventParticipant => ({ characterId: w, role: 'witness' })),
+      ...(input.extraParticipants ?? []).filter(
+        (p) =>
+          p.characterId !== actorId &&
+          p.characterId !== target?.id &&
+          !(input.witnessIds ?? []).includes(p.characterId),
+      ),
     ],
     sceneId: input.sceneId ?? null,
     interactionId: input.interactionId ?? null,
@@ -174,6 +186,7 @@ export function resolveInteraction(state: SimState, input: ResolveInput, ids: Id
         e.acquaintance = 'met';
         e.firstMetEventId ??= event.id;
       }
+      promoteAcquaintance(e);
       touched.add(relKey(from, to));
     }
   }

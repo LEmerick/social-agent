@@ -6,19 +6,38 @@
  * `resolveInteraction` applique tout immédiatement à l'état (coûts compris : `chargeAction` y est appelé une seule
  * fois). Un personnage n'est jamais dans deux interactions au même tick, une scène en porte au plus
  * `config.maxInteractionsPerScene` par tick.
+ *
+ * Connaissances (phase 3.f, voir `propagation.ts`) : après la résolution, les faits portés par l'interaction circulent
+ * (témoins, faits révélés, rumeurs) et sont écrits dans le lot du tick. Les observateurs d'une autre zone n'agissent
+ * qu'en écoutant aux portes (`eavesdrop`) ce qui s'est dit dans la scène pendant ce tick.
  */
 import { DomainError } from '../core/errors.js';
 import { HeuristicOutcomeModel } from '../decision/heuristic-outcome.js';
 import { type ActionOption, type OutcomeModel, optionKey } from '../decision/ports.js';
-import type { TickContext, TickHook } from '../epoch/types.js';
+import type { SceneMember, TickContext, TickHook } from '../epoch/types.js';
+import { betrayalEffects, provenanceSummary, refreshSightings } from '../knowledge/index.js';
 import { actionDef } from '../rules/catalog.js';
 import { availableOptions } from '../rules/options.js';
 import type { ActionCategory, ActionDef, SceneContext } from '../rules/types.js';
 import { resolveInteraction } from '../resolution/resolve.js';
 import type { Listener } from '../scene/audience.js';
-import type { DecisionRecord, InteractionRecord, UtteranceRecord } from '../state/journal.js';
-import { type Id, type RelationshipEdge, relKey } from '../state/types.js';
+import type {
+  DecisionRecord,
+  EffectInput,
+  EventParticipant,
+  InteractionRecord,
+  UtteranceRecord,
+} from '../state/journal.js';
+import { type Id, type RelationshipEdge, type SimState, relKey } from '../state/types.js';
 import { type DialogueGenerator, SummaryDialogue } from './dialogue.js';
+import {
+  type CarryLog,
+  type ScreenedReveals,
+  causeOf,
+  overhear,
+  propagateInteraction,
+  screenReveals,
+} from './propagation.js';
 
 export interface InteractionDeps {
   /** Défaut : `SummaryDialogue`. */
@@ -63,25 +82,24 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
     const max = state.world.config.maxInteractionsPerScene;
     const ids = ctx.ids('interaction');
     const engaged = new Set<Id>();
+    const log: CarryLog = new Map();
+    refreshSightings(state, ctx.scenes);
 
     for (const view of ctx.scenes) {
       const participants = view.members.filter((m) => m.role === 'participant');
-      const scene: SceneContext = {
-        members: participants.map((m) => ({
+      const sceneOf = (members: readonly SceneMember[]): SceneContext => ({
+        members: members.map((m) => ({
           characterId: m.characterId,
           locationId: view.scene.locationId,
           zoneId: m.zoneId,
         })),
-      };
+      });
+      const scene = sceneOf(participants);
       let count = 0;
 
-      for (const member of participants) {
-        if (count >= max) break;
-        const actorId = member.characterId;
-        if (engaged.has(actorId)) continue;
-
-        const options = availableOptions(state, actorId, scene).filter(isPlayable);
-        if (options.length === 0) continue;
+      /** Une interaction de `actorId`, ou rien si la politique s'abstient ou si l'option est abandonnée. */
+      const play = async (actorId: Id, options: readonly ActionOption[], eavesdropping: boolean): Promise<void> => {
+        if (options.length === 0) return;
         const decision = await ctx.decision.choose({
           actorId,
           state,
@@ -89,12 +107,12 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
           rng: ctx.rng('action', actorId),
         });
         const option = decision.chosen;
-        if (option === null) continue;
+        if (option === null) return;
         if (!options.some((o) => optionKey(o) === optionKey(option))) {
           throw new DomainError('INVALID_CHOICE', `${decision.policy} a choisi ${optionKey(option)}, hors des options`);
         }
-        // Cible déjà engagée ce tick : l'option est abandonnée.
-        if (option.targetId !== null && engaged.has(option.targetId)) continue;
+        // Cible déjà engagée ce tick : l'option est abandonnée (sauf l'écoute indiscrète, qui vise une conversation en cours).
+        if (!eavesdropping && option.targetId !== null && engaged.has(option.targetId)) return;
 
         const def = actionDef(option.action);
         if (!def) throw new DomainError('UNKNOWN_ACTION', `Action hors catalogue : ${option.action}`);
@@ -120,6 +138,9 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
           listeners: heard,
           rng: ctx.rng('dialogue', actorId),
         });
+        // Un énoncé ne révèle que ce que son locuteur sait ; le reste est ignoré et journalisé.
+        const screened = screenReveals(ctx, actorId, option, def, spoken.utterances);
+        const confrontation = confrontationOf(state, actorId, option, result.outcome);
 
         const resolution = resolveInteraction(
           state,
@@ -131,10 +152,39 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
             interactionId,
             locationId: view.scene.locationId,
             witnessIds,
-            ctx: scene,
+            ctx: eavesdropping ? sceneOf(view.members) : scene,
+            causedByEventId: causeOf(ctx, actorId, option, screened),
+            extraEffects: confrontation?.effects ?? [],
+            ...(confrontation ? { payload: confrontation.payload } : {}),
+            extraParticipants: subjectsOf(state, actorId, option, screened),
           },
           ids,
         );
+
+        const learned = eavesdropping
+          ? overhear(ctx, {
+              sceneId: view.scene.id,
+              eavesdropperId: actorId,
+              targetId: option.targetId ?? '',
+              outcome: result.outcome,
+              event: resolution.event,
+              log,
+            })
+          : [];
+        const report = eavesdropping
+          ? { created: [], revealed: [], learned }
+          : propagateInteraction(ctx, {
+              sceneId: view.scene.id,
+              interactionId,
+              actorId,
+              option,
+              def,
+              outcome: result.outcome,
+              event: resolution.event,
+              heard,
+              screened,
+              log,
+            });
 
         batch.interactions.push(
           interactionRecord(
@@ -147,9 +197,15 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
             result.outcome,
             spoken.mode,
             witnessIds,
+            eavesdropping,
+            {
+              ...report,
+              ignored: screened.ignored,
+              ...(confrontation ? { traitorId: confrontation.traitorId } : {}),
+            },
           ),
         );
-        spoken.utterances.forEach((u, seq): void => {
+        screened.utterances.forEach((u, seq): void => {
           const record: UtteranceRecord = { ...u, id: ids.next(), interactionId, seq, tick: ctx.tick };
           batch.utterances.push(record);
         });
@@ -176,11 +232,67 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
         for (const edge of resolution.relationships) upsertEdge(batch, edge);
 
         engaged.add(actorId);
-        if (option.targetId !== null) engaged.add(option.targetId);
+        if (option.targetId !== null && !eavesdropping) engaged.add(option.targetId);
         count += 1;
+      };
+
+      for (const member of participants) {
+        if (count >= max) break;
+        if (engaged.has(member.characterId)) continue;
+        const options = availableOptions(state, member.characterId, scene).filter(isPlayable);
+        await play(member.characterId, options, false);
+      }
+      // Les observateurs (autre zone du lieu) ne font qu'une chose : écouter aux portes les conversations du tick.
+      const everyone = sceneOf(view.members);
+      for (const member of view.members.filter((m) => m.role === 'observer')) {
+        if (count >= max) break;
+        if (engaged.has(member.characterId)) continue;
+        const options = availableOptions(state, member.characterId, everyone).filter((o) => o.action === 'eavesdrop');
+        await play(member.characterId, options, true);
       }
     }
   };
+}
+
+/** Effets et payload d'une confrontation au sujet d'un fait : provenance de l'accusateur, traître et retournement d'alliance. */
+function confrontationOf(
+  state: Readonly<SimState>,
+  actorId: Id,
+  option: ActionOption,
+  outcome: string,
+): { effects: EffectInput[]; payload: Record<string, unknown>; traitorId: Id | null } | null {
+  if (
+    (option.action !== 'confront' && option.action !== 'accuse') ||
+    option.factId === null ||
+    option.targetId === null
+  ) {
+    return null;
+  }
+  const betrayal = betrayalEffects(state, actorId, option.targetId, option.factId, outcome);
+  return {
+    effects: betrayal?.effects ?? [],
+    traitorId: betrayal?.traitorId ?? null,
+    payload: {
+      provenance: provenanceSummary(state, actorId, option.factId),
+      ...(betrayal ? { traitorId: betrayal.traitorId } : {}),
+    },
+  };
+}
+
+/** Le sujet d'un fait en jeu (hors acteur et cible) figure dans l'event avec le rôle `subject`. */
+function subjectsOf(
+  state: Readonly<SimState>,
+  actorId: Id,
+  option: ActionOption,
+  screened: ScreenedReveals,
+): EventParticipant[] {
+  const factIds = [option.factId, ...screened.reveals.flatMap((r) => r.factIds)];
+  const subjects = new Set<Id>();
+  for (const factId of factIds) {
+    const subject = factId === null ? null : (state.facts[factId]?.subjectId ?? null);
+    if (subject !== null && subject !== actorId && subject !== option.targetId) subjects.add(subject);
+  }
+  return [...subjects].sort().map((characterId) => ({ characterId, role: 'subject' }));
 }
 
 function interactionRecord(
@@ -193,7 +305,10 @@ function interactionRecord(
   outcome: string,
   mode: InteractionRecord['mode'],
   bystanderIds: readonly Id[],
+  eavesdropping: boolean,
+  facts: Record<string, unknown>,
 ): InteractionRecord {
+  const target = option.targetId;
   return {
     id,
     epochId: ctx.epochId,
@@ -205,11 +320,14 @@ function interactionRecord(
     action: option.action,
     outcome,
     mode,
-    classification: { category: def.category, catalogVersion: def.version },
+    classification: { category: def.category, catalogVersion: def.version, facts },
     participants: [
-      { characterId: actorId, role: 'speaker' },
-      ...(option.targetId === null ? [] : [{ characterId: option.targetId, role: 'addressee' as const }]),
-      ...bystanderIds.filter((b) => b !== option.targetId).map((b) => ({ characterId: b, role: 'bystander' as const })),
+      { characterId: actorId, role: eavesdropping ? 'eavesdropper' : 'speaker' },
+      // La cible d'une écoute indiscrète ne s'adresse pas à l'écouteur : elle reste simple présente.
+      ...(target === null
+        ? []
+        : [{ characterId: target, role: eavesdropping ? ('bystander' as const) : ('addressee' as const) }]),
+      ...bystanderIds.filter((b) => b !== target).map((b) => ({ characterId: b, role: 'bystander' as const })),
     ],
   };
 }

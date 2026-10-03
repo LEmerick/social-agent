@@ -80,6 +80,15 @@ function candidates(def: ActionDef, state: Readonly<SimState>, actorId: Id, ctx:
   switch (id) {
     case 'share_secret':
       return others.flatMap((t) => knownFactIds(state, actorId).map((f) => option(id, { targetId: t, factId: f })));
+    case 'confront':
+    case 'accuse':
+      // Seule ou à propos d'un fait connu qui concerne la cible (sujet ou objet).
+      return others.flatMap((t) => [
+        option(id, { targetId: t }),
+        ...knownFactIds(state, actorId)
+          .filter((f) => state.facts[f]?.subjectId === t || state.facts[f]?.objectId === t)
+          .map((f) => option(id, { targetId: t, factId: f })),
+      ]);
     case 'give':
     case 'trade':
     case 'show_item':

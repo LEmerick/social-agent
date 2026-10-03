@@ -24,5 +24,15 @@ export {
   trustFactor,
   witness,
 } from './transmit.js';
+export {
+  AGENDA_POLICY,
+  AgendaDecisionPolicy,
+  type AgendaPolicyOptions,
+  clearExecutedTells,
+  pendingTells,
+  refreshSightings,
+} from './agenda.js';
+export { NOTABLE_RULE, type NotableFact, falseFact, notableFact, sensitivityFor } from './notable.js';
+export { BETRAYAL_OUTCOMES, BETRAYAL_RULE, betrayalEffects, identifyTraitor, provenanceSummary } from './confront.js';
 export * from '../agent/context.js';
 export * from '../agent/context-render.js';
