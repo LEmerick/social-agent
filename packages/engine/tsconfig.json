@@ -2,7 +2,13 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "@ai-reality/engine": ["./src/index.ts"],
+      "@ai-reality/testkit": ["../testkit/src/index.ts"],
+      "@ai-reality/storage-memory": ["../storage-memory/src/index.ts"],
+      "@ai-reality/storage-prisma": ["../storage-prisma/src/index.ts"]
+    }
   },
   "include": ["src/**/*.ts", "tests/**/*.ts"]
 }
