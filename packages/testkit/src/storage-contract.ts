@@ -6,6 +6,7 @@ import { knowledgeContract } from './contract/knowledge.js';
 import { llmCallsContract } from './contract/llm-calls.js';
 import { memoriesContract } from './contract/memories.js';
 import { referentielContract } from './contract/referentiel.js';
+import { visualsContract } from './contract/visuals.js';
 import type { StorageHarness } from './contract/support.js';
 
 export type { StorageHarness } from './contract/support.js';
@@ -35,5 +36,6 @@ export function storageContract(name: string, factory: () => Promise<StorageHarn
     llmCallsContract(current);
     memoriesContract(current);
     formatsContract(current);
+    visualsContract(current);
   });
 }

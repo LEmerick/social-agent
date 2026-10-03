@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import { type StoragePort, withFormatCommit } from '@ai-reality/engine';
 import { formatRepos } from './repos-formats.js';
+import { visualRepos } from './repos-visuals.js';
 import { llmRepos } from './repos-llm.js';
 import { memoryRepos } from './repos-memory.js';
 import { refRepos } from './repos-ref.js';
@@ -21,6 +22,7 @@ export function prismaStorage(prisma: PrismaClient): StoragePort {
               ...simRepos(db),
               ...llmRepos(db),
               ...memoryRepos(db),
+              ...visualRepos(db),
               ...formatRepos(db),
             }),
           ),

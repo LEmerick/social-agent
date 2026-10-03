@@ -3,71 +3,13 @@
  * Sarah le raconte à Léa (intention différée), Léa à Thomas, Thomas confronte Alexandre. Une suite, deux stockages.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  type ActionOption,
-  type DecisionPolicy,
-  type DecisionResult,
-  type Id,
-  type SimState,
-  AgendaDecisionPolicy,
-  ScriptedDecisionPolicy,
-  loadSimState,
-  provenance,
-  trustFactor,
-} from '@ai-reality/engine';
-import { IDS, aWorld, seedWorld } from '@ai-reality/testkit';
-import { ScriptedOutcomeModel } from '../../src/decision/scripted-outcome.js';
-import { C, L, Z, go, snapshotOf } from './epoch-kit.js';
+import { type Id, type SimState, loadSimState, provenance, trustFactor } from '@ai-reality/engine';
+import { CHAIN_PROPOSAL, IDS, aWorld, chainPolicies, seedWorld } from '@ai-reality/testkit';
+import { C, snapshotOf } from './epoch-kit.js';
 import type { EpochHarness } from './interaction-epoch-suite.js';
 import { fullHooks, interactionScheduler, runOf } from './interaction-kit.js';
 
-const PROPOSAL = 'a proposé une alliance à';
-
-interface Turn {
-  readonly action: string;
-  readonly targetId: Id;
-  /** Le fait de l'alliance proposée (créé pendant l'exécution : son identifiant n'est connu qu'alors). */
-  readonly aboutProposal: boolean;
-}
-
-const say = (action: string, targetId: Id, aboutProposal = false): Turn => ({ action, targetId, aboutProposal });
-
-/** Destinations écrites ; actions écrites par tick, avec le fait de l'alliance retrouvé dans l'état. */
-class ChainScript implements DecisionPolicy {
-  readonly #moves = new ScriptedDecisionPolicy({
-    destinations: {
-      [C.alexandre]: { 0: go(L.jardin, Z.banc) },
-      [C.sarah]: { 0: go(L.jardin, Z.banc), 1: go(L.cuisine) },
-      [C.lea]: { 0: go(L.cuisine), 4: go(L.salon) },
-      [C.thomas]: { 0: go(L.chambres), 4: go(L.salon), 6: go(L.jardin, Z.banc) },
-    },
-  });
-  readonly #turns: Readonly<Record<Id, Readonly<Record<number, Turn>>>> = {
-    [C.alexandre]: { 0: say('propose_alliance', C.sarah) },
-    // Tick 3 : Sarah n'a pas de tour écrit, c'est son intention différée qui la fait parler.
-    [C.lea]: { 5: say('share_secret', C.thomas, true) },
-    [C.thomas]: { 7: say('confront', C.alexandre, true) },
-  };
-
-  choose(input: Parameters<DecisionPolicy['choose']>[0]): Promise<DecisionResult> {
-    const turn = this.#turns[input.actorId]?.[input.state.tick];
-    const proposal = Object.values(input.state.facts).find((f) => f.predicate === PROPOSAL)?.id ?? null;
-    const chosen: ActionOption | null =
-      turn === undefined
-        ? null
-        : (input.options.find(
-            (o) =>
-              o.action === turn.action &&
-              o.targetId === turn.targetId &&
-              o.factId === (turn.aboutProposal ? proposal : null),
-          ) ?? null);
-    return Promise.resolve({ chosen, rngDraw: null, policy: 'scripted@1' });
-  }
-
-  chooseDestination(input: Parameters<DecisionPolicy['chooseDestination']>[0]) {
-    return this.#moves.chooseDestination(input);
-  }
-}
+const PROPOSAL = CHAIN_PROPOSAL;
 
 export interface ChainRun {
   readonly state: SimState;
@@ -84,12 +26,7 @@ export async function runChain(storage: EpochHarness['storage']): Promise<ChainR
   const spy = (ctx: { tick: number; state: SimState }): void => {
     agendaAt[ctx.tick] = structuredClone(ctx.state.characters[C.sarah]?.agenda ?? []);
   };
-  const decision = new AgendaDecisionPolicy(new ChainScript());
-  const outcome = new ScriptedOutcomeModel({
-    propose_alliance: 'accepted',
-    share_secret: 'believed',
-    confront: 'escalated',
-  });
+  const { decision, outcome } = chainPolicies();
   await interactionScheduler(storage, decision, outcome, fullHooks([spy])).run(runOf(fixture)).done;
   const snap = await snapshotOf(storage, fixture.world.id, 0);
   const state = await loadSimState(storage, fixture.world.id, fixture.season.number);

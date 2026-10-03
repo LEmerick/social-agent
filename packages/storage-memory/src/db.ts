@@ -1,5 +1,6 @@
 import {
   type CharacterRecord,
+  type CharacterVisualRecord,
   type CharacterStateRecord,
   type DecisionRecord,
   type DirectiveRecord,
@@ -57,6 +58,8 @@ export interface Db {
   snapshots: Map<string, RelationshipEdge[]>;
   llmCalls: Map<string, LlmCallRecord>;
   memories: Map<string, MemoryRecord>;
+  /** Clé : `characterId|version`. */
+  characterVisuals: Map<string, CharacterVisualRecord>;
   /** Formats de jeu (objets, missions, équipes, votes, calendrier) : voir `repos-formats.ts`. */
   formats: FormatTables;
 }
@@ -87,6 +90,7 @@ export const emptyDb = (): Db => ({
   snapshots: new Map(),
   llmCalls: new Map(),
   memories: new Map(),
+  characterVisuals: new Map(),
   formats: emptyFormatTables(),
 });
 

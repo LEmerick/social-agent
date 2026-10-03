@@ -8,7 +8,6 @@ import {
   createNarrativeEngine,
   createWriterAgent,
   memoryNarrativeStorage,
-  sceneSheetsOf,
   storageContextProvider,
 } from '../src/index.js';
 import { C, EPOCH_14, EVT, L, seedBetrayal } from './helpers/betrayal.js';
@@ -130,15 +129,21 @@ describe('épisode 14 « l’alliance trahie » (journal écrit à la main, Writ
   it('exporte les fiches Scene pour le Video Engine', async () => {
     const { sim, engine } = await setup([scriptWithConfessional()]);
     const episode = await engine.produce(EPOCH_14);
-    const [characters, locations] = await sim.tx(
-      async (s) => [await s.characters.listByWorld(IDS.world), await s.locations.listByWorld(IDS.world)] as const,
-    );
-
-    const sheets = sceneSheetsOf(episode, {
-      characters,
-      locations,
-      visuals: { [C.sarah]: { version: 'v2', description: 'robe blanche' } },
+    const visual = (version: number, validFromEpoch: number, visualDescription: string) => ({
+      characterId: C.sarah,
+      version,
+      referenceImages: [`sarah-v${String(version)}.png`],
+      voiceId: 'voix-sarah',
+      wardrobeId: null,
+      visualDescription,
+      validFromEpoch,
     });
+    // v1 dès l'époque 0, v2 dès la 10 (en vigueur à l'épisode 14), v3 dès la 20 (pas encore).
+    for (const v of [visual(1, 0, 'robe bleue'), visual(2, 10, 'robe blanche'), visual(3, 20, 'tailleur')]) {
+      await sim.tx((s) => s.characterVisuals.insert(v));
+    }
+
+    const sheets = await engine.sceneSheets(episode);
 
     expect(sheets).toHaveLength(4);
     expect(sheets[0]).toMatchObject({
@@ -149,8 +154,13 @@ describe('épisode 14 « l’alliance trahie » (journal écrit à la main, Writ
     });
     expect(sheets[0]?.characters.map((c) => [c.name, c.visual?.version ?? null])).toEqual([
       ['Alexandre', null],
-      ['Sarah', 'v2'],
+      ['Sarah', 2],
     ]);
+    expect(sheets[0]?.characters[1]?.visual).toMatchObject({
+      description: 'robe blanche',
+      referenceImages: ['sarah-v2.png'],
+      voiceId: 'voix-sarah',
+    });
     expect(sheets[0]?.dialogues.map((d) => [d.kind, d.speakerName])).toEqual([
       ['dialogue', 'Alexandre'],
       ['dialogue', 'Sarah'],

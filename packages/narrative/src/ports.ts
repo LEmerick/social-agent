@@ -3,7 +3,16 @@
  * d'autre) ; l'écriture se limite à `EpisodeStore` (tables `episode*` et `narrative_arc`). Côté SQL, le rôle
  * `ai_reality_narrative` applique la même frontière (voir la migration `narrative`).
  */
-import type { CharacterRecord, EpochJournal, EpochRecord, EventRecord, Id, LocationRecord } from '@ai-reality/engine';
+import type {
+  CharacterRecord,
+  CharacterVisualRecord,
+  EpochJournal,
+  EpochRecord,
+  EventRecord,
+  GoalRecord,
+  Id,
+  LocationRecord,
+} from '@ai-reality/engine';
 import type { ScriptLine, Shot, Claim } from './script.js';
 import type { NarrativeArc, ValidationIssue } from './types.js';
 
@@ -14,6 +23,9 @@ export interface SimulationReader {
   eventsOfWorld(worldId: Id): Promise<EventRecord[]>;
   characters(worldId: Id): Promise<CharacterRecord[]>;
   locations(worldId: Id): Promise<LocationRecord[]>;
+  goals(worldId: Id): Promise<GoalRecord[]>;
+  /** Versions visuelles des personnages (`character_visual`), triées par personnage puis version. */
+  characterVisuals(worldId: Id): Promise<CharacterVisualRecord[]>;
 }
 
 export type EpisodeStatus = 'draft' | 'validated' | 'rejected';

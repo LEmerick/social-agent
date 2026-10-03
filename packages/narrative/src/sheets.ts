@@ -1,19 +1,22 @@
 /** Export des fiches `Scene` pour le Video Engine : lieu, personnages (+ version visuelle), ton, plans, dialogues. */
-import type { Id } from '@ai-reality/engine';
+import type { CharacterVisualRecord, Id } from '@ai-reality/engine';
 import { scriptOfRecord } from './episode-rows.js';
 import type { EpisodeRecord } from './ports.js';
 import type { Shot } from './script.js';
 
 export interface CharacterVisualInfo {
-  readonly version: string;
+  readonly version: number;
   readonly description: string | null;
+  readonly referenceImages: readonly string[];
+  readonly voiceId: string | null;
+  readonly wardrobeId: string | null;
 }
 
 export interface SheetWorld {
   readonly characters: readonly { readonly id: Id; readonly firstName: string }[];
   readonly locations: readonly { readonly id: Id; readonly name: string; readonly visualRef: string | null }[];
-  /** Version visuelle courante de chaque personnage, quand elle existe (table `character_visual`). */
-  readonly visuals?: Readonly<Record<Id, CharacterVisualInfo>>;
+  /** Versions visuelles (`character_visual`) : pour chaque personnage, la plus récente valable à l'époque de l'épisode. */
+  readonly visuals?: readonly CharacterVisualRecord[];
 }
 
 export interface SceneSheet {
@@ -39,6 +42,26 @@ export interface SceneSheet {
   readonly sources: readonly Id[];
 }
 
+/** Version visuelle en vigueur à l'époque `epochNumber` : la plus haute dont `validFromEpoch` ne dépasse pas l'époque. */
+export function visualAt(
+  visuals: readonly CharacterVisualRecord[],
+  characterId: Id,
+  epochNumber: number,
+): CharacterVisualInfo | null {
+  const valid = visuals
+    .filter((v) => v.characterId === characterId && v.validFromEpoch <= epochNumber)
+    .sort((a, b) => b.validFromEpoch - a.validFromEpoch || b.version - a.version)[0];
+  return valid
+    ? {
+        version: valid.version,
+        description: valid.visualDescription,
+        referenceImages: [...valid.referenceImages],
+        voiceId: valid.voiceId,
+        wardrobeId: valid.wardrobeId,
+      }
+    : null;
+}
+
 export function sceneSheetsOf(episode: EpisodeRecord, world: SheetWorld): SceneSheet[] {
   const nameOf = new Map(world.characters.map((c) => [c.id, c.firstName]));
   const locationOf = new Map(world.locations.map((l) => [l.id, l]));
@@ -55,7 +78,7 @@ export function sceneSheetsOf(episode: EpisodeRecord, world: SheetWorld): SceneS
       characters: scene.characterIds.map((id) => ({
         id,
         name: nameOf.get(id) ?? id,
-        visual: world.visuals?.[id] ?? null,
+        visual: visualAt(world.visuals ?? [], id, episode.number),
       })),
       tone: scene.tone,
       summary: scene.summary,

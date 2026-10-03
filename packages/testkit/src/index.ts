@@ -31,3 +31,4 @@ export {
   type AdventureWorldOptions,
   adventureWorld,
 } from './fixtures/adventure.js';
+export { CHAIN_PROPOSAL, ChainScript, chainPolicies, playChainEpoch } from './scenarios/chain.js';
