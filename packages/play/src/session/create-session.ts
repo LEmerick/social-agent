@@ -6,6 +6,7 @@
  * pondérée déterministe, ou LLM si un `LLMPort` est fourni. Le joueur ne reçoit que des événements perçus.
  */
 import {
+  AgendaDecisionPolicy,
   type DecisionPolicy,
   DomainError,
   type EpochHooks,
@@ -36,6 +37,7 @@ import { type Choice, PlayerDecisionPolicy, PlayerOutcomeModel, type Prompter } 
 import type {
   EpochSummary,
   PlayClock,
+  PlayMap,
   PlayEvent,
   PlayRequest,
   PlayRequestKind,
@@ -76,6 +78,8 @@ export interface PlaySession {
   relations(): PlayerRelation[];
   knowledge(): PlayerKnowledge[];
   clock(): PlayClock;
+  /** Les lieux de la Maison et leurs liaisons (public). */
+  map(): PlayMap;
   /** Abandonne la partie : la demande en cours est rejetée et le moteur s’arrête. */
   close(): void;
 }
@@ -183,7 +187,8 @@ export async function createPlaySession(options: PlaySessionOptions): Promise<Pl
   };
 
   // ── Politiques ──
-  const npc = options.npc ?? new NpcDecisionPolicy();
+  // Les intentions différées (`tell`, issues de la propagation) passent avant le goût du moment.
+  const npc = new AgendaDecisionPolicy(options.npc ?? new NpcDecisionPolicy());
   const persona = (id: Id): string => {
     const c = fixture.characters.find((x) => x.id === id);
     return c ? personaPrompt(c) : '';
@@ -303,6 +308,7 @@ export async function createPlaySession(options: PlaySessionOptions): Promise<Pl
         stats: { ...c.stats },
         credits: c.credits,
         place: pos?.kind === 'at' ? ctx.place : null,
+        placeId: pos?.kind === 'at' ? pos.locationId : null,
         zone: ctx.zone,
         moving: pos?.kind === 'transit',
         present: ctx.present,
@@ -347,6 +353,20 @@ export async function createPlaySession(options: PlaySessionOptions): Promise<Pl
         belief: k.fact.inventedById === playerId ? 'tu sais que c’est faux' : (BELIEF_FR[k.knowledge.belief] ?? ''),
         confidence: k.knowledge.confidence,
       }));
+    },
+
+    map(): PlayMap {
+      const { tickMinutes } = state.world.config;
+      return {
+        locations: Object.values(state.locations)
+          .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+          .map((l) => ({ id: l.id, name: l.name, zones: l.zones.map((z) => z.slug) })),
+        routes: state.routes.map((r) => ({
+          from: r.fromLocationId,
+          to: r.toLocationId,
+          minutes: r.travelTicks * tickMinutes,
+        })),
+      };
     },
 
     clock(): PlayClock {

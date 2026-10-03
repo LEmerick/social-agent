@@ -152,10 +152,18 @@ export async function runPlayApp(options: PlayAppOptions): Promise<number> {
         if (answer === null) return farewell(print, style);
         const key = answer.toLowerCase();
         if (key === 'q') return farewell(print, style);
-        if (key === 'r') print(rule(style, 'Relations'), ...relationsLines(session, style));
-        else if (key === 'k') print(rule(style, 'Ce que je sais'), ...knowledgeLines(session, style));
-        else if (key === 'l') print(rule(style, 'Journal'), ...journalLines(session, style));
-        else if (key === '?' || key === 'h') print(style.dim(HELP));
+        const shortcut =
+          key === 'r'
+            ? [rule(style, 'Relations'), ...relationsLines(session, style)]
+            : key === 'k'
+              ? [rule(style, 'Ce que je sais'), ...knowledgeLines(session, style)]
+              : key === 'l'
+                ? [rule(style, 'Journal'), ...journalLines(session, style)]
+                : key === '?' || key === 'h'
+                  ? [style.dim(HELP)]
+                  : null;
+        // Après un raccourci, la demande en cours est rappelée : on sait toujours à quoi l'on répond.
+        if (shortcut) print(...shortcut, rule(style), ...requestLines(request, style));
         else if (NUMBER.test(key)) {
           try {
             session.answer(request.id, Number(key));

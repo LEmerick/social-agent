@@ -20,7 +20,8 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "play:server": "node dist/server.js"
   },
   "dependencies": {
     "@ai-reality/engine": "workspace:*",
