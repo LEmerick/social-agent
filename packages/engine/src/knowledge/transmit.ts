@@ -42,7 +42,7 @@ export interface KnowledgeListener extends Listener {
 export interface SkippedLearning {
   readonly characterId: Id;
   readonly factId: Id;
-  readonly reason: 'duplicate' | 'sees_only' | 'unknown_character' | 'is_sender';
+  readonly reason: 'duplicate' | 'sees_only' | 'unknown_character' | 'is_sender' | 'known';
 }
 
 export interface PropagationResult {
@@ -59,6 +59,10 @@ export interface TransmitInput {
   readonly viaEventId: Id | null;
   readonly epoch: number;
   readonly tick: number;
+  /** Croyance imposée aux destinataires directs (`addressee`), par exemple l'issue `believed` d'un `share_secret`. */
+  readonly addresseeBelief?: Belief;
+  /** Ne rien apprendre à qui croit déjà ce fait avec au moins autant de confiance (raison `known`). */
+  readonly skipKnown?: boolean;
 }
 
 export interface WitnessInput {
@@ -123,6 +127,8 @@ function learn(
  * - `sees` n'apprend rien (il voit la scène, pas le contenu) ;
  * - confiance : voir `receivedConfidence`, avec la confiance du récepteur envers l'émetteur ;
  * - `parentKnowledgeId` = meilleure connaissance de l'émetteur ; pas de doublon (même personnage, fait, event) ;
+ * - `addresseeBelief` remplace la croyance déduite de la confiance pour le destinataire (issue d'un `share_secret`) ;
+ * - `skipKnown` n'apprend rien à qui croit déjà le fait avec autant de confiance ;
  * - un fait sensible (≥ 2) crée une intention différée `tell` (voir `deferredTell`).
  */
 export function transmit(state: SimState, input: TransmitInput, ids: IdFactory): PropagationResult {
@@ -155,6 +161,11 @@ export function transmit(state: SimState, input: TransmitInput, ids: IdFactory):
         const overheard = (listener.role ?? 'addressee') !== 'addressee';
         const trust = relOf(state, listener.characterId, input.fromId).trust;
         const confidence = receivedConfidence(parent.confidence, trust, overheard);
+        const held = input.skipKnown ? bestEdge(state, listener.characterId, fact.id) : undefined;
+        if (held && held.belief === 'believes' && held.confidence >= confidence) {
+          skip('known');
+          continue;
+        }
         learn(
           state,
           {
@@ -164,7 +175,7 @@ export function transmit(state: SimState, input: TransmitInput, ids: IdFactory):
             toldById: input.fromId,
             parent,
             confidence,
-            belief: beliefFor(trust, confidence),
+            belief: overheard || !input.addresseeBelief ? beliefFor(trust, confidence) : input.addresseeBelief,
           },
           input,
           ids,

@@ -32,6 +32,11 @@ export const hasNegativePast = (state: Readonly<SimState>, actorId: Id, targetId
   return back.trust < 30 || back.rivalry >= 20 || back.affection < 0 || forth.rivalry >= 20;
 };
 
+const believesFact = (state: Readonly<SimState>, characterId: Id, factId: Id): boolean =>
+  Object.values(state.knowledge).some(
+    (k) => k.characterId === characterId && k.factId === factId && k.belief !== 'disbelieves',
+  );
+
 const ownsItem = (ctx: SceneContext, characterId: Id, itemId: Id | null): boolean =>
   itemId !== null && (ctx.inventory?.[characterId] ?? []).includes(itemId);
 
@@ -49,10 +54,9 @@ export const PRE = {
     relOf(s, o.targetId ?? '', a).alliance < 50,
   breakAlliance: (s, a, o, c) => sceneTarget(s, a, o, c) && relOf(s, a, o.targetId ?? '').alliance >= 50,
   negotiateVote: (s, a, o, c) => sceneTarget(s, a, o, c) && c.voteUpcoming === true,
-  shareSecret: (s, a, o, c) =>
-    sceneTarget(s, a, o, c) &&
-    o.factId !== null &&
-    Object.values(s.knowledge).some((k) => k.characterId === a && k.factId === o.factId && k.belief !== 'disbelieves'),
+  shareSecret: (s, a, o, c) => sceneTarget(s, a, o, c) && o.factId !== null && believesFact(s, a, o.factId),
+  /** Confrontation : avec un fait, l'accusateur doit le tenir pour vrai ou douteux (jamais un fait qu'il sait faux). */
+  confront: (s, a, o, c) => sceneTarget(s, a, o, c) && (o.factId === null || believesFact(s, a, o.factId)),
   challenge: (s, a, o, c) => sceneTarget(s, a, o, c) && c.activityAvailable === true,
   sabotage: (s, a, o, c) => sceneTarget(s, a, o, c) && s.characters[a]?.status === 'active',
   moveTo: (s, a, o) => {
