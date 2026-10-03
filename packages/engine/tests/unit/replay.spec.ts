@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import {
   HeuristicOutcomeModel,
   availableOptions,
-  canonicalJson,
   journalHash,
   projectedValues,
   replayEffects,
@@ -14,6 +13,7 @@ import {
   stateHash,
   untracedChanges,
 } from '../../src/rules/index.js';
+import { canonicalJson } from '../../src/core/canonical-json.js';
 import { Rng } from '../../src/core/rng.js';
 import { simIdFactory } from '../../src/core/sim-ids.js';
 import { defaultEdge } from '../../src/state/apply-effect.js';

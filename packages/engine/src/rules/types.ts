@@ -85,7 +85,7 @@ export type ActionTarget = 'none' | 'character' | 'characters' | 'location' | 's
 export type ActionVolume = 'whisper' | 'normal' | 'loud' | 'hidden';
 
 /** Un participant de la scène de l'acteur, avec sa position. */
-export interface SceneMember {
+export interface SceneParticipant {
   readonly characterId: Id;
   readonly locationId: Id;
   readonly zoneId: Id | null;
@@ -97,7 +97,7 @@ export interface SceneMember {
  */
 export interface SceneContext {
   /** Membres de la scène de l'acteur, acteur compris. */
-  readonly members: readonly SceneMember[];
+  readonly members: readonly SceneParticipant[];
   /** Un créneau de vote est à venir (`negotiate_vote`). */
   readonly voteUpcoming?: boolean;
   /** Une `vote_session` est ouverte (`cast_vote`) et, si fourni, la liste des candidats. */

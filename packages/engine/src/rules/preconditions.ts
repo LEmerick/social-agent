@@ -4,13 +4,13 @@
  */
 import { defaultEdge } from '../state/apply-effect.js';
 import { relKey, type Id, type RelationshipEdge, type SimState } from '../state/types.js';
-import type { Precondition, SceneContext, SceneMember } from './types.js';
+import type { Precondition, SceneContext, SceneParticipant } from './types.js';
 
 /** Arête source→cible, ou arête par défaut si elles ne se connaissent pas encore (sans l'insérer). */
 export const relOf = (state: Readonly<SimState>, sourceId: Id, targetId: Id): Readonly<RelationshipEdge> =>
   state.relationships[relKey(sourceId, targetId)] ?? defaultEdge(sourceId, targetId);
 
-export const memberOf = (ctx: SceneContext, characterId: Id): SceneMember | undefined =>
+export const memberOf = (ctx: SceneContext, characterId: Id): SceneParticipant | undefined =>
   ctx.members.find((m) => m.characterId === characterId);
 
 const inGame = (state: Readonly<SimState>, id: Id): boolean => {

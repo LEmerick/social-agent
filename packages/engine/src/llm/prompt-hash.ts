@@ -1,26 +1,9 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
+import { canonicalJson } from '../core/canonical-json.js';
 import type { LlmRequest } from './port.js';
 
-type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
-
-/** JSON canonique : clés triées récursivement, `undefined` ignoré. Même valeur ⇒ même texte. */
-export function canonicalJson(value: unknown, indent?: number): string {
-  return JSON.stringify(sortKeys(value), null, indent);
-}
-
-function sortKeys(value: unknown): Json {
-  if (Array.isArray(value)) return value.map((v) => (v === undefined ? null : sortKeys(v)));
-  if (value !== null && typeof value === 'object') {
-    const out: { [key: string]: Json } = {};
-    for (const key of Object.keys(value).sort()) {
-      const v = (value as Record<string, unknown>)[key];
-      if (v !== undefined) out[key] = sortKeys(v);
-    }
-    return out;
-  }
-  return value as Json;
-}
+export { canonicalJson };
 
 /** Schéma JSON d'un schéma Zod (côté sortie), sans la balise `$schema`. */
 export function jsonSchemaOf(schema: z.ZodType): Record<string, unknown> {

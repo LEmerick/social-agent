@@ -29,7 +29,7 @@ export {
   replayStatuses,
   untracedChanges,
 } from '../events/replay.js';
-export { canonicalJson, journalHash, stateHash } from '../events/hash.js';
+export { journalHash, stateHash } from '../events/hash.js';
 export { SCRIPTED_OUTCOME_POLICY, ScriptedOutcomeModel, type OutcomeScript } from '../decision/scripted-outcome.js';
 export {
   HEURISTIC_OUTCOME_POLICY,
