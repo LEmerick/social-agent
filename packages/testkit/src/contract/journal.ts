@@ -388,6 +388,22 @@ export function journalContract(h: HarnessRef): void {
       ]);
     });
 
+    it('un instantané garde toute l’arête : compteur, événements, étiquettes', async () => {
+      await withEpoch(h);
+      const full = {
+        ...defaultEdge(C.alexandre, C.sarah),
+        trust: 61.5,
+        extraAxes: { loyaute: 3 },
+        acquaintance: 'close' as const,
+        interactionCount: 7,
+        firstMetEventId: fixedId(0x76, 11),
+        lastInteractionEventId: fixedId(0x76, 12),
+        labels: ['allié secret', 'rival'],
+      };
+      await h().storage.tx((s) => s.snapshots.saveRelationships(EPOCH_0.id, [full]));
+      expect(await h().storage.tx((s) => s.snapshots.relationships(EPOCH_0.id))).toEqual([full]);
+    });
+
     it('les instantanés de relations se relisent triés ; une nouvelle sauvegarde remplace la précédente', async () => {
       await withEpoch(h);
       const a = defaultEdge(C.sarah, C.lea);

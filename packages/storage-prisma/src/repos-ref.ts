@@ -20,6 +20,12 @@ export function refRepos(db: Db): RefRepos {
         const row = await db.world.findUnique({ where: { id } });
         return row ? { id: row.id, name: row.name, seed: row.seed, config: asRecord(row.config) } : undefined;
       },
+      async list() {
+        const rows = await db.world.findMany();
+        return rows
+          .map((row) => ({ id: row.id, name: row.name, seed: row.seed, config: asRecord(row.config) }))
+          .sort((a, b) => cmp(a.name, b.name) || cmp(a.id, b.id));
+      },
     },
 
     seasons: {

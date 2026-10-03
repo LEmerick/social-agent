@@ -49,6 +49,16 @@ const character = (rank: number, slug: string, over: Partial<CharacterRecord> = 
 
 export function referentielContract(h: HarnessRef): void {
   describe('monde et saison', () => {
+    it('worlds.list renvoie tous les mondes triés par nom puis identifiant', async () => {
+      expect(await h().storage.tx((s) => s.worlds.list())).toEqual([]);
+      const mk = (n: number, name: string) => ({ ...WORLD, id: fixedId(0, 90 + n), name });
+      const [b2, a1, b1] = [mk(1, 'Beta'), mk(2, 'Alpha'), mk(0, 'Beta')];
+      await h().storage.tx(async (s) => {
+        for (const w of [b2, a1, b1]) await s.worlds.insert(w);
+      });
+      expect((await h().storage.tx((s) => s.worlds.list())).map((w) => w.id)).toEqual([a1.id, b1.id, b2.id]);
+    });
+
     it("un monde inséré se relit à l'identique (config imbriquée comprise)", async () => {
       await h().storage.tx((s) => s.worlds.insert(WORLD));
       expect(await h().storage.tx((s) => s.worlds.findById(WORLD.id))).toEqual(WORLD);

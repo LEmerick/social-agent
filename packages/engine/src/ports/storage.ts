@@ -145,6 +145,8 @@ export interface EpochJournal {
 export interface WorldRepository {
   insert(world: WorldRecord): Promise<void>;
   findById(id: string): Promise<WorldRecord | undefined>;
+  /** Tous les mondes, triés par nom puis identifiant. */
+  list(): Promise<WorldRecord[]>;
 }
 
 export interface SeasonRepository {

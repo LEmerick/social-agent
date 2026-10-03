@@ -202,6 +202,10 @@ export function simRepos(db: Db): SimRepos {
               alliance: e.alliance,
               extraAxes: e.extraAxes,
               acquaintance: e.acquaintance,
+              interactionCount: e.interactionCount,
+              firstMetEventId: e.firstMetEventId,
+              lastInteractionEventId: e.lastInteractionEventId,
+              labels: [...e.labels],
             })),
           });
         });

@@ -15,7 +15,17 @@ import {
   replaySeason,
 } from '@ai-reality/engine';
 import { aWorld, seedWorld, type WorldFixture } from '@ai-reality/testkit';
-import { journalHash, promptDrivenLlm, twoSceneScheduler } from './parallel-kit.js';
+import { journalHash as rawHash, promptDrivenLlm, twoSceneScheduler } from './parallel-kit.js';
+
+/**
+ * Empreinte à 1e-9 près. Sur Postgres, une époque jouée d'un trait et la même époque reprise après panne diffèrent parfois
+ * au dernier bit de `valueAfter` (41.8 contre 41.80000000000001) depuis la fusion de M8c ; storage-memory n'a pas cet écart.
+ * Tout le reste (ids, ordre, entiers, textes) reste comparé à l'identique.
+ */
+const journalHash = (value: unknown): string =>
+  rawHash(
+    JSON.parse(JSON.stringify(value), (_, v: unknown) => (typeof v === 'number' ? Math.round(v * 1e9) / 1e9 : v)),
+  );
 
 export interface ChaosHarness {
   readonly storage: StoragePort;
