@@ -2,8 +2,10 @@
 
 Document de conception · V0.2 · 2026-10-03 · Cible : PostgreSQL 16 + `pgvector` + `btree_gist`, accès via **Prisma**
 
-> Les blocs SQL ci-dessous décrivent le modèle **physique** attendu. La source de vérité du code est
-> `prisma/schema.prisma`. Ce que Prisma ne sait pas exprimer est ajouté par migration SQL (voir [`database-prisma.md`](./database-prisma.md)).
+> Ce document décrit les **intentions** et les **contraintes** du modèle. La source de vérité des colonnes est le schéma
+> Prisma ([`packages/storage-prisma/prisma/schema/`](../packages/storage-prisma/prisma/schema/)) ; ce que Prisma ne sait pas
+> exprimer est dans la migration `constraints` (voir [`database-prisma.md`](./database-prisma.md)). Aucune définition de
+> table n'est recopiée ici, pour éviter toute dérive.
 
 > Complète [`engine-architecture.md`](./engine-architecture.md). Les tables de format (objets, missions, équipes, votes,
 > événements planifiés) sont définies dans [`game-formats.md`](./game-formats.md).
@@ -64,145 +66,56 @@ erDiagram
 
 ## 3. Référentiel
 
-```sql
-CREATE TABLE world (
-  id uuid PRIMARY KEY, name text NOT NULL, seed text NOT NULL,
-  config jsonb NOT NULL DEFAULT '{}',          -- ticksPerEpoch, tickMinutes, ...
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+Schéma : [`02-referentiel.prisma`](../packages/storage-prisma/prisma/schema/02-referentiel.prisma).
 
-CREATE TABLE season (
-  id uuid PRIMARY KEY, world_id uuid NOT NULL REFERENCES world,
-  number int NOT NULL, rules jsonb NOT NULL,   -- coûts, seuils de survie, créneaux imposés
-  rules_version int NOT NULL DEFAULT 1,
-  UNIQUE (world_id, number)
-);
-
-CREATE TABLE location (
-  id uuid PRIMARY KEY, world_id uuid NOT NULL REFERENCES world,
-  slug text NOT NULL, name text NOT NULL, kind text NOT NULL,  -- garden, kitchen, confessional...
-  capacity int, is_private boolean NOT NULL DEFAULT false,
-  visual_ref text,                                             -- pour le Video Engine
-  UNIQUE (world_id, slug)
-);
-
-CREATE TABLE location_zone (                  -- apartés : même lieu, portée d'écoute différente
-  id uuid PRIMARY KEY, location_id uuid NOT NULL REFERENCES location,
-  slug text NOT NULL, hearing_range text NOT NULL DEFAULT 'zone'  -- zone | location
-);
-
-CREATE TABLE location_route (                 -- graphe des déplacements
-  from_location_id uuid REFERENCES location, to_location_id uuid REFERENCES location,
-  travel_ticks smallint NOT NULL DEFAULT 1,
-  PRIMARY KEY (from_location_id, to_location_id)
-);
-```
+| Table | Rôle | Contraintes et invariants |
+|---|---|---|
+| `world` | Monde (multi-tenant), graine, `config` (ticks par époque, durée d'un tick…) | — |
+| `season` | Saison d'un monde : `rules` (économie, axes de relation, poids des scores), `format`, `rules_version` | `(world_id, number)` unique |
+| `location` | Lieu du graphe (`kind` : garden, kitchen, confessional…), capacité, lieu privé, `visual_ref` | `(world_id, slug)` unique |
+| `location_zone` | Sous-partie d'un lieu pour les apartés ; `hearing_range` = `zone` ou `location` | — |
+| `location_route` | Arête orientée du graphe des déplacements, `travel_ticks` | clé `(from, to)` |
 
 ---
 
 ## 4. Personnage
 
-```sql
-CREATE TABLE character (
-  id uuid PRIMARY KEY,                         -- character_id stable
-  world_id uuid NOT NULL REFERENCES world,
-  owner_user_id uuid,                          -- joueur (NULL = PNJ maison)
-  slug text NOT NULL,
-  first_name text NOT NULL, last_name text, age smallint, gender text,
-  origin text, backstory text, physical_description text, speech_style text,
-  autonomy text NOT NULL CHECK (autonomy IN ('autonomous','guided','directive')),
-  persona_prompt text,                         -- profil d'agent compilé (mis en cache LLM)
-  persona_version int NOT NULL DEFAULT 1,
-  status text NOT NULL DEFAULT 'active'
-    CHECK (status IN ('active','restricted','elimination_pending','eliminated','paused')),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (world_id, slug)
-);
+Schéma : [`03-personnage.prisma`](../packages/storage-prisma/prisma/schema/03-personnage.prisma).
 
-CREATE TABLE character_visual (               -- cohérence visuelle, versionnée
-  character_id uuid REFERENCES character, version int,
-  reference_images text[] NOT NULL, voice_id text, wardrobe_id text,
-  visual_description text,
-  valid_from_epoch int NOT NULL,               -- un changement de tenue est aussi un event
-  PRIMARY KEY (character_id, version)
-);
-
-CREATE TABLE character_trait (                -- traits STABLES
-  character_id uuid REFERENCES character, trait text, value smallint CHECK (value BETWEEN 0 AND 100),
-  PRIMARY KEY (character_id, trait)
-);
-
-CREATE TABLE character_goal (
-  id uuid PRIMARY KEY, character_id uuid NOT NULL REFERENCES character,
-  kind text NOT NULL CHECK (kind IN ('main','secondary','social','private')),
-  description text NOT NULL, origin text NOT NULL CHECK (origin IN ('player','ai','season')),
-  target_character_id uuid REFERENCES character,
-  status text NOT NULL DEFAULT 'open',         -- open | achieved | abandoned
-  created_epoch int, closed_epoch int
-);
-
-CREATE TABLE character_directive (            -- consignes du joueur, historisées
-  id uuid PRIMARY KEY, character_id uuid NOT NULL REFERENCES character,
-  text text NOT NULL, from_epoch int NOT NULL, to_epoch int,
-  biases jsonb,                                -- consigne compilée en bonus (voir action-catalog.md §7)
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-```
+| Table | Rôle | Contraintes et invariants |
+|---|---|---|
+| `character` | Identité stable (`character_id`), joueur propriétaire (NULL = PNJ), `autonomy`, profil d'agent compilé (`persona_prompt`, `persona_version`), `status` | `(world_id, slug)` unique ; `autonomy` et `status` en enums fermés |
+| `character_visual` | Cohérence visuelle versionnée (images, voix, garde-robe), valable à partir d'une époque | clé `(character_id, version)` ; un changement de tenue est aussi un event |
+| `character_trait` | Traits **stables** pendant une époque | clé `(character_id, trait)` ; valeur dans 0..100 (`CHECK`) |
+| `character_goal` | Objectifs `main` / `secondary` / `social` / `private`, d'origine `player`, `ai` ou `season` (missions) | — |
+| `character_directive` | Consignes du joueur historisées par plage d'époques, et leur compilation en `biases` (voir `action-catalog.md` §7) | — |
 
 ---
 
 ## 5. Temps et présence (le cœur du modèle)
 
-```sql
-CREATE TABLE epoch (
-  id uuid PRIMARY KEY, world_id uuid NOT NULL REFERENCES world, season_id uuid NOT NULL REFERENCES season,
-  number int NOT NULL,
-  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','running','completed','failed')),
-  rng_seed text NOT NULL, rules_version int NOT NULL,
-  last_committed_tick int NOT NULL DEFAULT -1, -- reprise sur erreur
-  started_at timestamptz, completed_at timestamptz,
-  UNIQUE (world_id, number)
-);
+Schéma : [`04-temps.prisma`](../packages/storage-prisma/prisma/schema/04-temps.prisma).
 
-CREATE TABLE scene (
-  id uuid PRIMARY KEY, epoch_id uuid NOT NULL REFERENCES epoch,
-  location_id uuid NOT NULL REFERENCES location, zone_id uuid REFERENCES location_zone,
-  kind text NOT NULL DEFAULT 'free',           -- free | activity | meal | ceremony | confessional
-  tick_start int NOT NULL, tick_end int,       -- [ouverture, fermeture) ; NULL = ouverte
-  title text,                                  -- facultatif, rempli après coup
-  importance real                              -- max des importances de ses events
-);
-CREATE INDEX ON scene (epoch_id, location_id, tick_start);
-```
+| Table | Rôle | Contraintes et invariants |
+|---|---|---|
+| `epoch` | Une journée simulée : statut, graine du RNG, version des règles, `last_committed_tick` pour la reprise | `(world_id, number)` unique |
+| `scene` | Unité de co-présence : un lieu (et une zone), une plage `[tick_start, tick_end)`, un `kind` (free, activity, meal…), `importance` | `tick_end > tick_start` (`CHECK`) ; index `(epoch_id, location_id, tick_start)` |
 
 ### `presence` : un personnage est toujours quelque part
 
 Une seule table unifie les trois situations. Une **contrainte d'exclusion** garantit qu'un personnage
 n'a jamais deux segments qui se chevauchent au cours d'une même époque.
 
-```sql
-CREATE EXTENSION IF NOT EXISTS btree_gist;
+Schéma : [`04-temps.prisma`](../packages/storage-prisma/prisma/schema/04-temps.prisma), contraintes dans la migration [`constraints`](../packages/storage-prisma/prisma/schema/migrations).
 
-CREATE TABLE presence (
-  id uuid PRIMARY KEY,
-  epoch_id uuid NOT NULL REFERENCES epoch,
-  character_id uuid NOT NULL REFERENCES character,
-  tick_start int NOT NULL, tick_end int,       -- NULL = segment en cours
-  kind text NOT NULL CHECK (kind IN ('scene','transit','offstage')),
-  scene_id uuid REFERENCES scene,              -- si kind = scene
-  from_location_id uuid REFERENCES location,   -- si kind = transit
-  to_location_id uuid REFERENCES location,     -- si kind = transit
-  offstage_reason text,                        -- sleep | restricted | eliminated | paused
-  role text,                                   -- dans une scène : participant | observer | hidden
-  CHECK ((kind = 'scene')    = (scene_id IS NOT NULL)),
-  CHECK ((kind = 'transit')  = (to_location_id IS NOT NULL)),
-  CHECK (tick_end IS NULL OR tick_end > tick_start),
-  -- ajoutée par migration SQL (non exprimable en Prisma) :
-  EXCLUDE USING gist (epoch_id WITH =, character_id WITH =, int4range(tick_start, tick_end) WITH &&)
-);
-CREATE INDEX ON presence (scene_id);
-CREATE INDEX ON presence (epoch_id, character_id);
-```
+| Règle | Mise en œuvre |
+|---|---|
+| Un `kind` parmi `scene`, `transit`, `offstage` | enum |
+| `kind = scene` ⇔ `scene_id` renseigné | `CHECK` |
+| `kind = transit` ⇔ `to_location_id` renseigné | `CHECK` |
+| `tick_end` NULL (en cours) ou `> tick_start` | `CHECK` |
+| Aucun chevauchement pour un même personnage dans une époque | `EXCLUDE USING gist (epoch_id =, character_id =, int4range(tick_start, tick_end) &&)` |
+| Dans une scène, `role` : `participant`, `observer` ou `hidden` ; hors-jeu, `offstage_reason` : sleep, restricted, eliminated, paused | applicatif |
 
 La complétude (aucun trou sur `[0, ticksPerEpoch)`) est vérifiée par le moteur à la clôture de l'époque.
 
@@ -238,93 +151,42 @@ await prisma.presence.findFirst({
 
 ### Interactions et dialogues
 
-```sql
-CREATE TABLE interaction (
-  id uuid PRIMARY KEY,
-  scene_id uuid NOT NULL REFERENCES scene,
-  type text NOT NULL,                          -- social | relational | strategic | competitive
-                                               -- informational | collective
-  initiator_id uuid REFERENCES character,
-  tick_start int NOT NULL, tick_end int,
-  action text NOT NULL, outcome text,          -- catalogue fermé, voir action-catalog.md
-  mode text NOT NULL DEFAULT 'dialogue',       -- dialogue | summarized (small talk résumé)
-  classification jsonb,                        -- résultat de la vérification du dialogue
-  event_id uuid                                -- event produit (rempli à la résolution)
-);
+Schéma : [`05-evenements.prisma`](../packages/storage-prisma/prisma/schema/05-evenements.prisma).
 
-CREATE TABLE interaction_participant (
-  interaction_id uuid REFERENCES interaction, character_id uuid REFERENCES character,
-  role text NOT NULL CHECK (role IN ('speaker','addressee','bystander','eavesdropper')),
-  perceived_outcome text,                      -- interprétation propre à chacun
-  emotion_after text,
-  PRIMARY KEY (interaction_id, character_id)
-);
-
-CREATE TABLE utterance (
-  id uuid PRIMARY KEY, interaction_id uuid NOT NULL REFERENCES interaction,
-  seq smallint NOT NULL, tick int NOT NULL,
-  speaker_id uuid NOT NULL REFERENCES character,
-  addressee_ids uuid[] NOT NULL DEFAULT '{}',
-  text text NOT NULL,
-  intent text, tone text, emotion text,
-  volume text NOT NULL DEFAULT 'normal',       -- whisper | normal | loud : portée d'écoute
-  revealed_fact_ids uuid[] NOT NULL DEFAULT '{}',
-  llm_call_id uuid,                            -- traçabilité et rejeu
-  UNIQUE (interaction_id, seq)
-);
-```
+| Table | Rôle | Contraintes et invariants |
+|---|---|---|
+| `interaction` | Une interaction dans une scène : `type`, initiateur, plage de ticks, `action` et `outcome` du catalogue fermé, `mode` (`dialogue` ou `summarized`), `classification` (résultat de la vérification) | `action` et `outcome` validés par le moteur contre `action-catalog.md` ; l'event produit pointe vers l'interaction (`event.interaction_id` unique) |
+| `interaction_participant` | Rôle de chacun (`speaker`, `addressee`, `bystander`, `eavesdropper`), issue perçue, émotion après | clé `(interaction_id, character_id)` |
+| `utterance` | Tours de parole : texte, intention, ton, émotion, `volume` (portée d'écoute), faits révélés, appel LLM d'origine | `(interaction_id, seq)` unique ; append-only |
 
 ### Event Log : la vérité de la simulation
 
 Un **event** est un fait accompli, horodaté en temps simulé. Une interaction produit un event,
 mais il existe aussi des events sans interaction : déplacement notable, défi, annonce, changement de statut ou de tenue.
 
-```sql
-CREATE TABLE event (
-  id uuid PRIMARY KEY,
-  world_id uuid NOT NULL, epoch_id uuid NOT NULL REFERENCES epoch, tick int NOT NULL,
-  seq bigint GENERATED ALWAYS AS IDENTITY,     -- ordre total dans le monde
-  type text NOT NULL,                          -- conversation | alliance_proposed | secret_revealed
-                                               -- confrontation | challenge_result | status_changed ...
-  scene_id uuid REFERENCES scene, interaction_id uuid REFERENCES interaction,
-  location_id uuid REFERENCES location,
-  payload jsonb NOT NULL,                      -- données propres au type
-  importance real NOT NULL DEFAULT 0,          -- signal pour le Narrative Engine (0..1)
-  caused_by_event_id uuid REFERENCES event,    -- chaînes causales A→B→C→D
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX ON event (epoch_id, tick);
-CREATE INDEX ON event (epoch_id, importance DESC);
+Schéma : [`05-evenements.prisma`](../packages/storage-prisma/prisma/schema/05-evenements.prisma).
 
-CREATE TABLE event_participant (
-  event_id uuid REFERENCES event, character_id uuid REFERENCES character,
-  role text NOT NULL,                          -- actor | target | witness | subject (on parle de lui)
-  PRIMARY KEY (event_id, character_id, role)
-);
-```
+| Table | Rôle | Contraintes et invariants |
+|---|---|---|
+| `event` | Fait accompli : `type` (conversation, alliance_proposed, secret_revealed, status_changed…), `payload`, `importance` 0..1, `caused_by_event_id` (chaînes causales A→B→C→D) | `seq` unique, attribué par le moteur (ordre total déterministe) ; append-only ; index `(epoch_id, tick)` et `(epoch_id, importance DESC)` |
+| `event_participant` | Qui est concerné : `actor`, `target`, `witness`, `subject` | clé `(event_id, character_id, role)` |
 
 ### `effect` : ce que ça a changé
 
 Chaque variation d'état est une ligne. C'est ce qui répond à la question « quelle influence la
 conversation a-t-elle eue sur le personnage et sur la relation ? ».
 
-```sql
-CREATE TABLE effect (
-  id uuid PRIMARY KEY,
-  event_id uuid NOT NULL REFERENCES event,
-  epoch_id uuid NOT NULL, tick int NOT NULL,
-  target_kind text NOT NULL CHECK (target_kind IN ('stat','mood','relationship','score','credit','goal','item','mission','team')),
-  character_id uuid NOT NULL REFERENCES character,       -- sujet de l'effet
-  other_character_id uuid REFERENCES character,          -- si relationship : la cible (orientée)
-  dimension text NOT NULL,                               -- trust, affection, energy, influence, social...
-  delta smallint NOT NULL,
-  value_after smallint,                                  -- dénormalisé pour la lecture rapide
-  rule_id text NOT NULL, rule_version int NOT NULL,      -- explicabilité et recalcul
-  reason text
-);
-CREATE INDEX ON effect (character_id, epoch_id);
-CREATE INDEX ON effect (character_id, other_character_id) WHERE target_kind = 'relationship';
-```
+Schéma : [`05-evenements.prisma`](../packages/storage-prisma/prisma/schema/05-evenements.prisma).
+
+| Champ | Intention |
+|---|---|
+| `event_id`, `epoch_id`, `tick` | Toute variation a une cause datée |
+| `target_kind` | `stat`, `mood`, `relationship`, `score`, `credit`, `goal`, `item`, `mission`, `team` |
+| `character_id`, `other_character_id` | Sujet de l'effet ; cible orientée si c'est une relation |
+| `dimension`, `delta`, `value_after` | Ce qui change, de combien, et la valeur après clamp (lecture rapide) |
+| `rule_id`, `rule_version` | Explicabilité et recalcul après changement de règles |
+
+Invariants : append-only ; aucune projection ne change sans effect associé.
 
 ```sql
 -- « Qu'est-ce que la conversation evt_0142 a changé ? »
@@ -340,29 +202,15 @@ WHERE e.event_id = $1;
 Les relations sont **orientées** : une ligne par couple `(source → cible)`. L'existence d'une ligne
 signifie que la source **connaît** la cible. On répond ainsi à « qui se connaît, qui s'est déjà rencontré ».
 
-```sql
-CREATE TABLE relationship (
-  world_id uuid NOT NULL,
-  source_id uuid REFERENCES character, target_id uuid REFERENCES character,
-  trust     smallint NOT NULL DEFAULT 30 CHECK (trust BETWEEN 0 AND 100),
-  affection smallint NOT NULL DEFAULT 0  CHECK (affection BETWEEN -100 AND 100),
-  rivalry   smallint NOT NULL DEFAULT 0  CHECK (rivalry BETWEEN 0 AND 100),
-  respect   smallint NOT NULL DEFAULT 50 CHECK (respect BETWEEN 0 AND 100),
-  fear      smallint NOT NULL DEFAULT 0  CHECK (fear BETWEEN 0 AND 100),
-  attraction smallint NOT NULL DEFAULT 0 CHECK (attraction BETWEEN 0 AND 100),
-  alliance  smallint NOT NULL DEFAULT 0  CHECK (alliance BETWEEN 0 AND 100),
-  extra_axes jsonb NOT NULL DEFAULT '{}',      -- axes propres à la saison : {"jealousy":40,"debt":10}
-  acquaintance text NOT NULL DEFAULT 'known_of'
-    CHECK (acquaintance IN ('known_of','met','acquainted','close')),
-  first_met_event_id uuid REFERENCES event,
-  last_interaction_event_id uuid REFERENCES event,
-  interaction_count int NOT NULL DEFAULT 0,
-  labels text[] NOT NULL DEFAULT '{}',         -- étiquettes perçues : 'ally', 'rival', 'crush'
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (source_id, target_id),
-  CHECK (source_id <> target_id)
-);
-```
+Schéma : [`06-relations.prisma`](../packages/storage-prisma/prisma/schema/06-relations.prisma), bornes dans la migration [`constraints`](../packages/storage-prisma/prisma/schema/migrations).
+
+| Règle | Mise en œuvre |
+|---|---|
+| Une ligne par couple orienté `(source → cible)`, jamais avec soi-même | clé `(source_id, target_id)` ; `CHECK (source_id <> target_id)` |
+| 7 axes de base : `trust`, `rivalry`, `respect`, `fear`, `attraction`, `alliance` dans 0..100, `affection` dans −100..100 | `CHECK` ; défauts trust 30, respect 50, autres 0 |
+| Axes de saison dans `extra_axes` (jsonb), bornés 0..100 | applicatif (moteur) |
+| Niveau de connaissance `acquaintance` : `known_of` → `met` → `acquainted` → `close` | enum |
+| Premier contact, dernière interaction, compteur, étiquettes perçues (`ally`, `rival`…) | colonnes dédiées |
 
 - **Modèle hybride** : les 7 axes de base sont des colonnes (incrément atomique via Prisma, `CHECK`, index).
   Les axes déclarés dans `season.rules.relationshipAxes` vont dans `extra_axes` (sans migration, bornés par le moteur).
@@ -386,77 +234,26 @@ ORDER BY ev.seq DESC;
 
 ## 8. État du personnage
 
-```sql
-CREATE TABLE character_state (                -- snapshot de fin d'époque (et état courant avec epoch_id = NULL)
-  character_id uuid REFERENCES character, epoch_id uuid REFERENCES epoch,
-  energy smallint, morale smallint, popularity smallint, influence smallint, reputation smallint,
-  credits int, status text,
-  mood jsonb NOT NULL DEFAULT '{}',            -- humeur VOLATILE : {"anger":0.2,"hope":0.7}
-  scores jsonb NOT NULL DEFAULT '{}',          -- social, drama, popularity, survival, influence
-  PRIMARY KEY (character_id, epoch_id)
-);
+Schéma : [`06-relations.prisma`](../packages/storage-prisma/prisma/schema/06-relations.prisma).
 
-CREATE TABLE credit_ledger (                  -- registre comptable, jamais modifié
-  id uuid PRIMARY KEY, character_id uuid NOT NULL REFERENCES character,
-  epoch_id uuid REFERENCES epoch, event_id uuid REFERENCES event,
-  amount int NOT NULL,                         -- négatif = débit
-  category text NOT NULL,                      -- upkeep | activity | special_action | player_intervention | reward
-  source text NOT NULL CHECK (source IN ('purchased','earned','system')),
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE score_entry (                    -- S = Σ wᵢ × eᵢ, recalculable
-  id uuid PRIMARY KEY, character_id uuid NOT NULL, epoch_id uuid NOT NULL, event_id uuid NOT NULL REFERENCES event,
-  score text NOT NULL,                         -- social | drama | popularity | survival | influence
-  weight real NOT NULL, impact real NOT NULL, rule_id text NOT NULL
-);
-```
+| Table | Rôle | Contraintes et invariants |
+|---|---|---|
+| `character_state` | État par personnage et par époque : stats (energy, morale, popularity, influence, reputation), crédits, statut, humeur **volatile**, scores ; écrit à chaque tick (état courant) et figé en fin d'époque. `runtime` porte les données de reprise (agenda, position) | clé `(character_id, epoch_id)` : l'état courant est la ligne de l'époque en cours |
+| `credit_ledger` | Registre comptable : montant (négatif = débit), catégorie (upkeep, activity, special_action, player_intervention, reward), `source` (`purchased`, `earned`, `system`) | append-only ; `C_fin = C_début − Σ débits + Σ crédits` |
+| `score_entry` | Contributions aux scores : `S = Σ poids × impact`, avec la règle d'origine | recalculable quand les poids changent |
+| `relationship_snapshot` | Relations figées en fin d'époque (courbes, rejeux partiels) | mêmes bornes que `relationship` |
 
 ---
 
 ## 9. Connaissances et mémoire
 
-```sql
-CREATE TABLE fact (                           -- vérité objective du monde (jamais montrée telle quelle aux agents)
-  id uuid PRIMARY KEY, world_id uuid NOT NULL,
-  subject_id uuid REFERENCES character, predicate text NOT NULL,
-  object_id uuid REFERENCES character, object_text text,
-  is_true boolean NOT NULL,                    -- false = rumeur ou mensonge
-  sensitivity smallint NOT NULL DEFAULT 0,     -- 0 public … 3 secret
-  origin_event_id uuid REFERENCES event,
-  invented_by_id uuid REFERENCES character     -- si rumeur fabriquée
-);
+Schéma : [`07-connaissances.prisma`](../packages/storage-prisma/prisma/schema/07-connaissances.prisma), index dans la migration [`constraints`](../packages/storage-prisma/prisma/schema/migrations).
 
-CREATE TABLE knowledge (                      -- ce qu'un personnage sait (ou croit savoir)
-  id uuid PRIMARY KEY,
-  character_id uuid NOT NULL REFERENCES character,
-  fact_id uuid NOT NULL REFERENCES fact,
-  source_type text NOT NULL CHECK (source_type IN ('seeded','public','witnessed','overheard','told','inferred')),
-  told_by_id uuid REFERENCES character,
-  via_event_id uuid REFERENCES event,          -- quand et comment il l'a appris
-  parent_knowledge_id uuid REFERENCES knowledge, -- chaîne de provenance
-  learned_epoch int NOT NULL, learned_tick int NOT NULL,
-  confidence real NOT NULL CHECK (confidence BETWEEN 0 AND 1),
-  belief text NOT NULL DEFAULT 'believes' CHECK (belief IN ('believes','doubts','disbelieves')),
-  UNIQUE (character_id, fact_id, via_event_id)
-);
-CREATE INDEX ON knowledge (character_id);
-CREATE INDEX ON knowledge (fact_id);
-
-CREATE TABLE memory (                         -- souvenirs subjectifs à la 1re personne
-  id uuid PRIMARY KEY, character_id uuid NOT NULL REFERENCES character,
-  event_id uuid REFERENCES event, epoch_id uuid NOT NULL,
-  kind text NOT NULL DEFAULT 'episodic',       -- episodic | reflection
-  summary text NOT NULL, emotion text,
-  salience real NOT NULL,                      -- décroît avec le temps, sauf si rappelé
-  about_character_ids uuid[] NOT NULL DEFAULT '{}',
-  embedding vector(1024),
-  last_recalled_epoch int
-);
-CREATE INDEX ON memory (character_id, salience DESC);
-CREATE INDEX ON memory USING gin (about_character_ids);
-CREATE INDEX ON memory USING hnsw (embedding vector_cosine_ops);
-```
+| Table | Rôle | Contraintes et invariants |
+|---|---|---|
+| `fact` | Vérité objective `(sujet, prédicat, objet)`, jamais montrée telle quelle aux agents ; `is_true = false` pour une rumeur ou un mensonge (`invented_by_id`) | `sensitivity` dans 0..3 (0 public … 3 secret) |
+| `knowledge` | Ce qu'un personnage sait ou croit : `source_type` (`seeded`, `public`, `witnessed`, `overheard`, `told`, `inferred`), qui le lui a dit, par quel event, maillon parent (`parent_knowledge_id`), confiance, croyance | `confidence` dans 0..1 ; `(character_id, fact_id, via_event_id)` unique ; le contexte d'un agent ne lit **que** cette table |
+| `memory` | Souvenir subjectif à la première personne : résumé, émotion, saillance (décroît sauf rappel), personnes concernées, `embedding vector(1024)` | index HNSW (cosinus) et GIN sur `about_character_ids` ; `Unsupported` côté Prisma, accès par `$queryRaw` |
 
 ```sql
 -- « Comment Thomas a-t-il appris l'alliance d'Alexandre ? » (chaîne de provenance)

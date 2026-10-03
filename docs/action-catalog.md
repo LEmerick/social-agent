@@ -152,22 +152,16 @@ Ces implémentations se choisissent par configuration : `createWorld({ decision:
 
 ## 6. Traçabilité : table `decision`
 
-```sql
-CREATE TABLE decision (
-  id uuid PRIMARY KEY,
-  epoch_id uuid NOT NULL REFERENCES epoch, tick int NOT NULL,
-  character_id uuid NOT NULL REFERENCES character,
-  kind text NOT NULL CHECK (kind IN ('action','outcome')),
-  options jsonb NOT NULL,              -- [{action, target, p, utility?}] ou {outcome: p}
-  chosen jsonb NOT NULL,
-  policy text NOT NULL,                -- llm@1 | utility@3 | montecarlo@1 | player
-  rng_draw double precision,           -- valeur tirée (NULL si choix LLM ou joueur)
-  interaction_id uuid REFERENCES interaction,
-  llm_call_id uuid,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX ON decision (epoch_id, character_id, tick);
-```
+Schéma : [`05-evenements.prisma`](../packages/storage-prisma/prisma/schema/05-evenements.prisma) (modèle `Decision`), append-only.
+
+| Champ | Intention |
+|---|---|
+| `epoch_id`, `tick`, `character_id` | Qui décide, et quand |
+| `kind` | `action` (choix de l'action) ou `outcome` (tirage de l'issue) |
+| `options` | Options proposées : `[{action, target, p, utility?}]` ou `{outcome: p}` |
+| `chosen`, `policy` | Ce qui a été retenu et par quelle politique (`llm@1`, `utility@3`, `montecarlo@1`, `player`) |
+| `rng_draw` | Valeur tirée (NULL si choix LLM ou joueur) |
+| `interaction_id`, `llm_call_id` | Liens vers l'interaction et l'appel LLM |
 
 Champs ajoutés à `interaction` : `action text NOT NULL`, `outcome text`. Le champ `classification` ne sert plus qu'au résultat de la vérification.
 

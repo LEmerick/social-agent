@@ -340,16 +340,9 @@ Leviers :
 
 ### Traçabilité des appels LLM (table `llm_call`)
 
-```sql
-CREATE TABLE llm_call (
-  id uuid PRIMARY KEY, epoch_id uuid, character_id uuid,
-  purpose text NOT NULL,                       -- plan | speak | evaluate | reflect
-  model text NOT NULL, prompt_hash text NOT NULL,
-  request jsonb NOT NULL, response jsonb NOT NULL,
-  input_tokens int, output_tokens int, cached_tokens int, latency_ms int,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-```
+Schéma : [`05-evenements.prisma`](../packages/storage-prisma/prisma/schema/05-evenements.prisma) (modèle `LlmCall`) : objectif (`plan`, `speak`,
+`evaluate`, `reflect`), modèle, `prompt_hash` (indexé, clé des cassettes), requête et réponse complètes, jetons
+(entrée, sortie, cache) et latence.
 
 Elle sert au rejeu déterministe (`ReplayLLM`), au suivi des coûts et au débogage du comportement des agents.
 

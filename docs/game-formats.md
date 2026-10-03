@@ -35,32 +35,12 @@ Exemple complet au §7.
 
 ### 2.1 Modèle
 
-```sql
-CREATE TABLE item_def (                        -- le type d'objet
-  id uuid PRIMARY KEY, season_id uuid NOT NULL REFERENCES season,
-  slug text NOT NULL,                          -- immunity_necklace, totem, food_ration, clue
-  name text NOT NULL, description text,
-  kind text NOT NULL,                          -- power | resource | clue | cosmetic
-  effects jsonb NOT NULL DEFAULT '{}',         -- {"on":"vote_session","nullify_votes_against_holder":true}
-  transferable boolean NOT NULL DEFAULT true,
-  expires_after_epoch int,                     -- validité (ex. jusqu'au conseil à 5)
-  visual_ref text,
-  UNIQUE (season_id, slug)
-);
+Schéma : [`08-formats.prisma`](../packages/storage-prisma/prisma/schema/08-formats.prisma).
 
-CREATE TABLE item (                            -- un exemplaire de l'objet
-  id uuid PRIMARY KEY, item_def_id uuid NOT NULL REFERENCES item_def,
-  -- projection courante (reconstruite depuis les events) :
-  holder_character_id uuid REFERENCES character,
-  location_id uuid REFERENCES location,        -- s'il est posé ou caché quelque part
-  hidden boolean NOT NULL DEFAULT false,
-  search_difficulty smallint CHECK (search_difficulty BETWEEN 0 AND 100),
-  is_fake boolean NOT NULL DEFAULT false,      -- faux collier fabriqué par un joueur
-  fake_of_item_def_id uuid REFERENCES item_def,
-  state text NOT NULL DEFAULT 'active',        -- active | used | expired | destroyed
-  CHECK (num_nonnulls(holder_character_id, location_id) <= 1)
-);
-```
+| Table | Rôle | Contraintes et invariants |
+|---|---|---|
+| `item_def` | Type d'objet d'une saison : `kind` (`power`, `resource`, `clue`, `cosmetic`), `effects` (ex. annuler les votes contre le porteur), transférable, expiration | `(season_id, slug)` unique |
+| `item` | Exemplaire : porteur **ou** lieu (caché ou non), difficulté de fouille, faux objet (`fake_of_item_def_id`), état (`active`, `used`, `expired`, `destroyed`) | au plus un emplacement (`CHECK num_nonnulls(holder, location) <= 1`) ; difficulté 0..100 ; projection reconstruite depuis les events |
 
 ### 2.2 Événements d'objet
 
@@ -101,32 +81,12 @@ Un **indice** (`clue`) est un objet qui, une fois trouvé, crée une connaissanc
 
 ### 3.1 Modèle
 
-```sql
-CREATE TABLE mission_def (
-  id uuid PRIMARY KEY, season_id uuid NOT NULL REFERENCES season,
-  slug text NOT NULL, title text NOT NULL, briefing text NOT NULL, -- texte donné à l'agent
-  scope text NOT NULL CHECK (scope IN ('individual','team','all')),
-  secrecy text NOT NULL CHECK (secrecy IN ('public','private','secret')),
-  objective jsonb NOT NULL,                    -- condition (DSL §3.2), évaluée sur le SimState
-  failure jsonb,                               -- condition d'échec anticipé
-  reward jsonb NOT NULL,                       -- {"credits":20} | {"item":"clue_2"} | {"immunity":1}
-  penalty jsonb,
-  deadline_epoch_offset int,                   -- nombre d'époques après l'attribution
-  UNIQUE (season_id, slug)
-);
+Schéma : [`08-formats.prisma`](../packages/storage-prisma/prisma/schema/08-formats.prisma).
 
-CREATE TABLE mission_assignment (
-  id uuid PRIMARY KEY, mission_def_id uuid NOT NULL REFERENCES mission_def,
-  character_id uuid REFERENCES character, team_id uuid REFERENCES team,
-  assigned_event_id uuid NOT NULL REFERENCES event,
-  deadline_epoch int,
-  status text NOT NULL DEFAULT 'active'
-    CHECK (status IN ('active','succeeded','failed','expired','abandoned')),
-  progress jsonb NOT NULL DEFAULT '{}',        -- projection : sous-objectifs atteints
-  resolved_event_id uuid REFERENCES event,
-  CHECK (num_nonnulls(character_id, team_id) = 1)
-);
-```
+| Table | Rôle | Contraintes et invariants |
+|---|---|---|
+| `mission_def` | Mission d'une saison : briefing donné à l'agent, portée (`individual`, `team`, `all`), secret (`public`, `private`, `secret`), objectif et échec (DSL §3.2), récompense, pénalité, échéance relative | `(season_id, slug)` unique |
+| `mission_assignment` | Attribution à un personnage **ou** une équipe, event d'attribution, échéance, statut (`active`, `succeeded`, `failed`, `expired`, `abandoned`), progression projetée, event de résolution | exactement un titulaire (`CHECK num_nonnulls(character, team) = 1`) |
 
 ### 3.2 Objectifs : un petit DSL de conditions pures
 
@@ -173,21 +133,12 @@ Prédicats V1 :
 
 ## 4. Équipes
 
-```sql
-CREATE TABLE team (
-  id uuid PRIMARY KEY, season_id uuid NOT NULL REFERENCES season,
-  slug text NOT NULL, name text NOT NULL, color text,
-  camp_location_id uuid REFERENCES location,   -- camp privé de la tribu
-  created_epoch int NOT NULL, dissolved_epoch int
-);
+Schéma : [`08-formats.prisma`](../packages/storage-prisma/prisma/schema/08-formats.prisma).
 
-CREATE TABLE team_membership (
-  team_id uuid REFERENCES team, character_id uuid REFERENCES character,
-  from_epoch int NOT NULL, to_epoch int,       -- réunification, échanges, exclusions
-  joined_event_id uuid REFERENCES event,
-  PRIMARY KEY (team_id, character_id, from_epoch)
-);
-```
+| Table | Rôle | Contraintes et invariants |
+|---|---|---|
+| `team` | Équipe d'une saison, couleur, camp privé (`camp_location_id`), époques de création et de dissolution | `(season_id, slug)` unique |
+| `team_membership` | Appartenance dans le temps (réunification, échanges, exclusions), event d'entrée | clé `(team_id, character_id, from_epoch)` |
 
 - **Appartenance** : un terme `team_loyalty` dans l'utilité (bonus aux actions qui servent l'équipe) et un axe de saison
   dans `relationship.extra_axes` (`teammate_bond`).
@@ -198,26 +149,12 @@ CREATE TABLE team_membership (
 
 ## 5. Votes
 
-```sql
-CREATE TABLE vote_session (
-  id uuid PRIMARY KEY, epoch_id uuid NOT NULL REFERENCES epoch, tick int NOT NULL,
-  scene_id uuid REFERENCES scene,              -- le conseil est une scène
-  kind text NOT NULL,                          -- elimination | designation | public
-  electorate jsonb NOT NULL,                   -- {"team":"<id>"} | {"all_active":true} | {"public":true}
-  rules jsonb NOT NULL,                        -- égalité, révote, immunités
-  result jsonb,                                -- décompte, désigné, objets joués
-  event_id uuid REFERENCES event
-);
+Schéma : [`08-formats.prisma`](../packages/storage-prisma/prisma/schema/08-formats.prisma).
 
-CREATE TABLE vote (
-  vote_session_id uuid REFERENCES vote_session,
-  voter_id uuid REFERENCES character,
-  target_id uuid NOT NULL REFERENCES character,
-  decision_id uuid,                            -- trace du choix (table decision)
-  revealed boolean NOT NULL DEFAULT false,     -- le vote est-il connu des autres ?
-  PRIMARY KEY (vote_session_id, voter_id)
-);
-```
+| Table | Rôle | Contraintes et invariants |
+|---|---|---|
+| `vote_session` | Un conseil (une scène) : `kind` (`elimination`, `designation`, `public`), électorat, règles (égalité, révote, immunités), résultat, event produit | un event au plus par session |
+| `vote` | Un bulletin : votant, cible, décision tracée (`decision`), révélé ou non | un vote par votant et par session |
 
 Déroulé d'un conseil :
 1. **Discussions préalables** : interactions normales (`negotiate_vote`, `lie`, `threaten`).
@@ -235,21 +172,16 @@ via l'API, entre deux époques.
 
 Ils remplacent les créneaux en jsonb de `season.rules`.
 
-```sql
-CREATE TABLE scheduled_event (
-  id uuid PRIMARY KEY, season_id uuid NOT NULL REFERENCES season,
-  kind text NOT NULL,                          -- challenge | council | meal | announcement | item_drop
-                                               -- mission_assign | team_shuffle | merge | final
-  epoch int, tick_start int, tick_end int,     -- planification fixe…
-  trigger jsonb,                               -- …ou conditionnelle (DSL §3.2)
-  location_id uuid REFERENCES location,
-  participants jsonb NOT NULL,                 -- {"teams":["red","blue"]} | {"all_active":true}
-  mandatory boolean NOT NULL DEFAULT true,
-  announced boolean NOT NULL DEFAULT true,     -- les personnages le savent-ils à l'avance ?
-  params jsonb NOT NULL DEFAULT '{}',          -- type d'épreuve, récompense, objet déposé…
-  fired_event_id uuid REFERENCES event
-);
-```
+Schéma : [`08-formats.prisma`](../packages/storage-prisma/prisma/schema/08-formats.prisma).
+
+| Champ | Intention |
+|---|---|
+| `kind` | `challenge`, `council`, `meal`, `announcement`, `item_drop`, `mission_assign`, `team_shuffle`, `merge`, `final` |
+| `epoch`, `tick_start`, `tick_end` | Planification fixe… |
+| `trigger` | …ou conditionnelle (DSL §3.2) |
+| `location_id`, `participants`, `mandatory`, `announced` | Où, qui, obligatoire ou non, connu à l'avance ou non |
+| `params` | Type d'épreuve, récompense, objet déposé… |
+| `fired_event_id` | Event produit au déclenchement (unique) |
 
 Exemples de déclencheurs : « si un personnage passe en `elimination_pending` → conseil le soir même » ;
 « quand il reste 10 participants → réunification » ; « si le collier n'a pas été trouvé à l'époque 6 → nouvel indice déposé ».

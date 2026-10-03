@@ -2,19 +2,21 @@
 
 Document de conception · V0.1 · 2026-10-03
 
-> Complète [`database-model.md`](./database-model.md), qui décrit le modèle physique attendu.
+> Complète [`database-model.md`](./database-model.md), qui décrit les intentions et les contraintes du modèle.
 
 ---
 
 ## Organisation
 
 ```
-prisma/
-├── schema.prisma          # modèles, relations, index, enums
+packages/storage-prisma/prisma/schema/
+├── 00-base.prisma … 08-formats.prisma   # un fichier par bloc : modèles, relations, index, enums
 └── migrations/
-    ├── 0001_init/         # généré par `prisma migrate dev`
-    └── 0002_constraints/  # migration SQL écrite à la main (créée avec --create-only)
+    ├── <horodatage>_init/               # généré par Prisma
+    └── <horodatage>_constraints/        # SQL écrit à la main (créé avec --create-only)
 ```
+
+Les commandes Prisma prennent toujours `--schema prisma/schema` (dossier de schéma).
 
 La lib expose un adaptateur `@ai-reality/storage-prisma` qui implémente `StoragePort` à partir d'un
 `PrismaClient` fourni par l'application. La lib ne crée pas elle-même de connexion.
@@ -32,76 +34,24 @@ La lib expose un adaptateur `@ai-reality/storage-prisma` qui implémente `Storag
 | Exclusion de chevauchement sur `presence` | Pas de `EXCLUDE` dans Prisma | `CREATE EXTENSION btree_gist` + `ALTER TABLE presence ADD CONSTRAINT … EXCLUDE USING gist (…)` |
 | `CHECK` (bornes 0..100, cohérence `kind`/`scene_id`) | Pas de `CHECK` dans Prisma | `ALTER TABLE … ADD CONSTRAINT … CHECK (…)` |
 | `memory.embedding vector(1024)` + index HNSW | Type non supporté | Champ `Unsupported("vector(1024)")?` dans le schéma ; paquet npm `pgvector` + `$queryRaw` / `$executeRaw` ; index HNSW créé en SQL |
-| Append-only sur `event`, `effect`, `utterance`, `credit_ledger` | Droits SQL | `REVOKE UPDATE, DELETE … FROM app_role` |
+| Append-only sur `event`, `effect`, `utterance`, `credit_ledger` | Droits SQL | `REVOKE UPDATE, DELETE … FROM ai_reality_app` (aussi sur `decision`) |
 | `event.seq` identity | Pas d'`IDENTITY` explicite | `BigInt @default(autoincrement())` suffit |
 | Chaîne de provenance (CTE récursive) | Pas de requête récursive | `$queryRaw` typé, encapsulé dans le repository `knowledge` |
 
 Prisma ignore ces objets lors de l'introspection. Il ne les supprime pas lors des migrations suivantes, mais
-`prisma migrate diff` peut les signaler : il faut garder la migration `0002_constraints` idempotente
+`prisma migrate diff` peut les signaler : il faut garder la migration `constraints` idempotente
 (`IF NOT EXISTS`, `DROP CONSTRAINT IF EXISTS` avant `ADD`).
 
-## Extrait de `schema.prisma`
+## Où trouver quoi
 
-```prisma
-generator client { provider = "prisma-client-js"; previewFeatures = ["postgresqlExtensions"] }
-datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  extensions = [vector, btree_gist]
-}
+| Besoin | Fichier |
+|---|---|
+| Générateur, source de données, extensions `vector` et `btree_gist` | `00-base.prisma` |
+| Enums (statuts, rôles, sources de connaissance…) | `01-enums.prisma` |
+| Exemple de modèle à relations nommées multiples vers `Character` | `Relationship` et `Knowledge` (`06-relations.prisma`, `07-connaissances.prisma`) |
+| Champ non supporté par Prisma | `Memory.embedding Unsupported("vector(1024)")?` (`07-connaissances.prisma`) |
+| `CHECK`, `EXCLUDE`, HNSW, GIN, rôle append-only | migration `constraints` |
 
-enum PresenceKind { scene transit offstage }
-
-model Presence {
-  id             String       @id @db.Uuid
-  epochId        String       @map("epoch_id") @db.Uuid
-  characterId    String       @map("character_id") @db.Uuid
-  tickStart      Int          @map("tick_start")
-  tickEnd        Int?         @map("tick_end")
-  kind           PresenceKind
-  sceneId        String?      @map("scene_id") @db.Uuid
-  fromLocationId String?      @map("from_location_id") @db.Uuid
-  toLocationId   String?      @map("to_location_id") @db.Uuid
-  offstageReason String?      @map("offstage_reason")
-  role           String?
-
-  epoch     Epoch     @relation(fields: [epochId], references: [id])
-  character Character @relation(fields: [characterId], references: [id])
-  scene     Scene?    @relation(fields: [sceneId], references: [id])
-
-  @@index([sceneId])
-  @@index([epochId, characterId, tickStart])
-  @@map("presence")
-}
-
-model Relationship {
-  worldId     String  @map("world_id") @db.Uuid
-  sourceId    String  @map("source_id") @db.Uuid
-  targetId    String  @map("target_id") @db.Uuid
-  trust       Int     @default(30) @db.SmallInt
-  affection   Int     @default(0)  @db.SmallInt
-  rivalry     Int     @default(0)  @db.SmallInt
-  respect     Int     @default(50) @db.SmallInt
-  fear        Int     @default(0)  @db.SmallInt
-  attraction  Int     @default(0)  @db.SmallInt
-  alliance    Int     @default(0)  @db.SmallInt
-  extraAxes   Json    @default("{}") @map("extra_axes")  // axes de saison
-  acquaintance Acquaintance @default(known_of)
-  // …
-  source Character @relation("RelSource", fields: [sourceId], references: [id])
-  target Character @relation("RelTarget", fields: [targetId], references: [id])
-
-  @@id([sourceId, targetId])
-  @@map("relationship")
-}
-
-model Memory {
-  id        String @id @db.Uuid
-  // …
-  embedding Unsupported("vector(1024)")?
-  @@map("memory")
-}
-```
 
 ## Points d'attention
 - **Relations multiples vers `Character`** : `Relationship`, `Effect`, `Knowledge` (`characterId`, `toldById`) et `Fact`
