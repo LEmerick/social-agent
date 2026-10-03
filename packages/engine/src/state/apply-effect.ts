@@ -17,6 +17,18 @@ import {
 
 export const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
+/**
+ * Quantifie une dimension à 1e-6 près. Une valeur ainsi arrondie (≤ 9 chiffres significatifs pour |v| ≤ 1000)
+ * se relit exactement depuis Postgres, qui renvoie les flottants avec 15 chiffres significatifs : sans cela,
+ * une époque reprise après panne repartirait de valeurs arrondies et divergerait au dernier bit.
+ */
+export const quantize = (value: number): number => {
+  const q = Math.round(value * 1e6) / 1e6;
+  return Object.is(q, -0) ? 0 : q;
+};
+
+const bounded = (value: number, min: number, max: number): number => quantize(clamp(value, min, max));
+
 const isAxis = (d: string): d is Axis => (BASE_AXES as readonly string[]).includes(d);
 const isStat = (d: string): d is StatKey => (STAT_KEYS as readonly string[]).includes(d);
 const isScore = (d: string): d is ScoreName => (SCORE_NAMES as readonly string[]).includes(d);
@@ -62,29 +74,29 @@ export function applyEffect(state: SimState, fx: EffectInput): number | null {
       const e = edge(state, fx.characterId, fx.otherCharacterId);
       if (isAxis(fx.dimension)) {
         const [min, max] = AXIS_BOUNDS[fx.dimension];
-        e[fx.dimension] = clamp(e[fx.dimension] + fx.delta, min, max);
+        e[fx.dimension] = bounded(e[fx.dimension] + fx.delta, min, max);
         return e[fx.dimension];
       }
       if (!state.season.rules.relationshipAxes.includes(fx.dimension)) {
         throw new DomainError('INVALID_EFFECT', `Axe de relation inconnu : ${fx.dimension}`);
       }
-      const next = clamp((e.extraAxes[fx.dimension] ?? 0) + fx.delta, 0, 100);
+      const next = bounded((e.extraAxes[fx.dimension] ?? 0) + fx.delta, 0, 100);
       e.extraAxes[fx.dimension] = next;
       return next;
     }
     case 'stat': {
       if (!isStat(fx.dimension)) throw new DomainError('INVALID_EFFECT', `Stat inconnue : ${fx.dimension}`);
-      character.stats[fx.dimension] = clamp(character.stats[fx.dimension] + fx.delta, 0, 100);
+      character.stats[fx.dimension] = bounded(character.stats[fx.dimension] + fx.delta, 0, 100);
       return character.stats[fx.dimension];
     }
     case 'mood': {
-      const next = clamp((character.mood[fx.dimension] ?? 0) + fx.delta, 0, 100);
+      const next = bounded((character.mood[fx.dimension] ?? 0) + fx.delta, 0, 100);
       character.mood[fx.dimension] = next;
       return next;
     }
     case 'score': {
       if (!isScore(fx.dimension)) throw new DomainError('INVALID_EFFECT', `Score inconnu : ${fx.dimension}`);
-      character.scores[fx.dimension] += fx.delta;
+      character.scores[fx.dimension] = quantize(character.scores[fx.dimension] + fx.delta);
       return character.scores[fx.dimension];
     }
     case 'credit': {
