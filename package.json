@@ -17,7 +17,8 @@
     "test": "turbo run test",
     "test:unit": "vitest run",
     "test:live": "vitest run --config vitest.live.config.ts",
-    "play": "turbo run build --filter=@ai-reality/play... --output-logs=errors-only && node packages/play/dist/cli.js"
+    "play": "turbo run build --filter=@ai-reality/play... --output-logs=errors-only && node packages/play/dist/cli.js",
+    "web": "pnpm -F @ai-reality/web dev"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
