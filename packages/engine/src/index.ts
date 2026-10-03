@@ -39,3 +39,4 @@ export * from './scene/index.js';
 export { ScriptedDecisionPolicy } from './decision/scripted-policy.js';
 export { loadSimStateWithRuntime } from './state/load-runtime.js';
 export * from './rules/index.js';
+export * from './knowledge/index.js';
