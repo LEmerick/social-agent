@@ -137,6 +137,7 @@ export interface WorldRepository {
 export interface SeasonRepository {
   insert(season: SeasonRecord): Promise<void>;
   findByNumber(worldId: string, number: number): Promise<SeasonRecord | undefined>;
+  findById(id: string): Promise<SeasonRecord | undefined>;
   /** Met à jour les règles (recalcul des scores après changement de règles). */
   updateRules(id: string, rules: Readonly<Record<string, unknown>>, rulesVersion: number): Promise<void>;
 }

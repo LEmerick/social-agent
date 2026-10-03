@@ -33,6 +33,7 @@ export function refRepos(db: Db): RefRepos {
         }),
       findByNumber: (worldId, number) =>
         later(() => copy([...db.seasons.values()].find((s) => s.worldId === worldId && s.number === number))),
+      findById: (id) => later(() => copy(db.seasons.get(id))),
       updateRules: (id, rules, rulesVersion) =>
         later(() => {
           const season = db.seasons.get(id);
