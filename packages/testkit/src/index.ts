@@ -22,3 +22,4 @@ export {
   palmiersRelationships,
 } from './fixtures/palmiers.js';
 export * from './llm/index.js';
+export { type UniformRandomOptions, UniformRandomPolicy } from './policies/uniform-random.js';
