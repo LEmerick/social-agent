@@ -143,8 +143,8 @@ model Effect {
   characterId      String       @map("character_id") @db.Uuid
   otherCharacterId String?      @map("other_character_id") @db.Uuid
   dimension        String
-  delta            Int          @db.SmallInt
-  valueAfter       Int?         @map("value_after") @db.SmallInt
+  delta            Float        @db.DoublePrecision
+  valueAfter       Float?       @map("value_after") @db.DoublePrecision
   ord              BigInt       @default(autoincrement())
   ruleId           String       @map("rule_id")
   ruleVersion      Int          @map("rule_version")
@@ -177,4 +177,3 @@ model LlmCall {
   @@index([promptHash])
   @@map("llm_call")
 }
-

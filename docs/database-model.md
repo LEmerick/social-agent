@@ -60,7 +60,9 @@ erDiagram
   Prisma les manipule nativement. La contrainte d'exclusion utilise l'expression `int4range(tick_start, tick_end)`.
 - Nommage : tables et colonnes en `snake_case` côté SQL, modèles et champs en `PascalCase` / `camelCase` côté Prisma (`@@map` / `@map`).
 - Les tables du bloc « Ce qui se passe » sont **append-only** (droits `INSERT` seulement pour le rôle applicatif).
-- Les dimensions numériques sont des `smallint`, clampées par `CHECK`.
+- Les dimensions continues (axes de relation, stats, `effect.delta`) sont en `double precision`, bornées par `CHECK` :
+  les règles produisent des deltas décimaux (traits, habituation), et le rejeu doit retrouver exactement les projections.
+  Les crédits restent entiers (montants comptables).
 
 ---
 

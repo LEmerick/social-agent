@@ -4,13 +4,13 @@ model Relationship {
   worldId                String       @map("world_id") @db.Uuid
   sourceId               String       @map("source_id") @db.Uuid
   targetId               String       @map("target_id") @db.Uuid
-  trust                  Int          @default(30) @db.SmallInt
-  affection              Int          @default(0) @db.SmallInt
-  rivalry                Int          @default(0) @db.SmallInt
-  respect                Int          @default(50) @db.SmallInt
-  fear                   Int          @default(0) @db.SmallInt
-  attraction             Int          @default(0) @db.SmallInt
-  alliance               Int          @default(0) @db.SmallInt
+  trust                  Float        @default(30) @db.DoublePrecision
+  affection              Float        @default(0) @db.DoublePrecision
+  rivalry                Float        @default(0) @db.DoublePrecision
+  respect                Float        @default(50) @db.DoublePrecision
+  fear                   Float        @default(0) @db.DoublePrecision
+  attraction             Float        @default(0) @db.DoublePrecision
+  alliance               Float        @default(0) @db.DoublePrecision
   extraAxes              Json         @default("{}") @map("extra_axes")
   acquaintance           Acquaintance @default(known_of)
   firstMetEventId        String?      @map("first_met_event_id") @db.Uuid
@@ -32,13 +32,13 @@ model RelationshipSnapshot {
   epochId      String       @map("epoch_id") @db.Uuid
   sourceId     String       @map("source_id") @db.Uuid
   targetId     String       @map("target_id") @db.Uuid
-  trust        Int          @db.SmallInt
-  affection    Int          @db.SmallInt
-  rivalry      Int          @db.SmallInt
-  respect      Int          @db.SmallInt
-  fear         Int          @db.SmallInt
-  attraction   Int          @db.SmallInt
-  alliance     Int          @db.SmallInt
+  trust        Float        @db.DoublePrecision
+  affection    Float        @db.DoublePrecision
+  rivalry      Float        @db.DoublePrecision
+  respect      Float        @db.DoublePrecision
+  fear         Float        @db.DoublePrecision
+  attraction   Float        @db.DoublePrecision
+  alliance     Float        @db.DoublePrecision
   extraAxes    Json         @map("extra_axes")
   acquaintance Acquaintance
 
@@ -51,11 +51,11 @@ model RelationshipSnapshot {
 model CharacterState {
   characterId String           @map("character_id") @db.Uuid
   epochId     String           @map("epoch_id") @db.Uuid
-  energy      Int?             @db.SmallInt
-  morale      Int?             @db.SmallInt
-  popularity  Int?             @db.SmallInt
-  influence   Int?             @db.SmallInt
-  reputation  Int?             @db.SmallInt
+  energy      Float?           @db.DoublePrecision
+  morale      Float?           @db.DoublePrecision
+  popularity  Float?           @db.DoublePrecision
+  influence   Float?           @db.DoublePrecision
+  reputation  Float?           @db.DoublePrecision
   credits     Int?
   status      CharacterStatus?
   mood        Json             @default("{}")
@@ -100,4 +100,3 @@ model ScoreEntry {
 
   @@map("score_entry")
 }
-

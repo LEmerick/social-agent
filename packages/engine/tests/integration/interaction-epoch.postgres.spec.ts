@@ -26,17 +26,14 @@ const { PrismaClient } = requireFromAdapter('@prisma/client') as {
 };
 const prisma = new PrismaClient({ datasourceUrl: url });
 
-interactionEpochSuite(
-  'storage-prisma',
-  () =>
-    Promise.resolve({
-      storage: prismaStorage(prisma),
-      reset: async () => {
-        await prisma.$executeRawUnsafe('TRUNCATE TABLE "world", "llm_call" CASCADE');
-      },
-      close: () => Promise.resolve(),
-    }),
-  false,
+interactionEpochSuite('storage-prisma', () =>
+  Promise.resolve({
+    storage: prismaStorage(prisma),
+    reset: async () => {
+      await prisma.$executeRawUnsafe('TRUNCATE TABLE "world", "llm_call" CASCADE');
+    },
+    close: () => Promise.resolve(),
+  }),
 );
 
 afterAll(async () => {

@@ -12,4 +12,3 @@ datasource db {
   url        = env("DATABASE_URL")
   extensions = [vector, btree_gist]
 }
-

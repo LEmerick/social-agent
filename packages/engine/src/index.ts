@@ -40,3 +40,4 @@ export { ScriptedDecisionPolicy } from './decision/scripted-policy.js';
 export { loadSimStateWithRuntime } from './state/load-runtime.js';
 export * from './rules/index.js';
 export * from './knowledge/index.js';
+export * from './interaction/index.js';

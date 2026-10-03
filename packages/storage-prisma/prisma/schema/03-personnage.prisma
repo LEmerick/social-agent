@@ -109,4 +109,3 @@ model CharacterDirective {
 
   @@map("character_directive")
 }
-

@@ -73,4 +73,3 @@ model Presence {
   @@index([epochId, characterId])
   @@map("presence")
 }
-

@@ -258,4 +258,3 @@ enum ScheduledKind {
 
   @@map("scheduled_kind")
 }
-

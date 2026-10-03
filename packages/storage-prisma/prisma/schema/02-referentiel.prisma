@@ -85,4 +85,3 @@ model LocationRoute {
   @@id([fromLocationId, toLocationId])
   @@map("location_route")
 }
-
