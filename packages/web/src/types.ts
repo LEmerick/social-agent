@@ -16,7 +16,8 @@ export interface PlayRequest {
   readonly context: { readonly place: string; readonly zone: string | null; readonly present: readonly string[] };
 }
 
-export type PlayEventKind = 'heard' | 'seen' | 'arrived' | 'left' | 'learned' | 'relation' | 'credits' | 'status';
+export type PlayEventKind =
+  'heard' | 'acted' | 'seen' | 'arrived' | 'left' | 'learned' | 'relation' | 'credits' | 'status';
 
 export interface PlayEvent {
   readonly seq: number;

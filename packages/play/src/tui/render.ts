@@ -6,6 +6,7 @@ import type { Style } from './ansi.js';
 
 const KIND_MARK: Readonly<Record<PlayEventKind, string>> = {
   heard: '»',
+  acted: '▶',
   seen: '~',
   arrived: '→',
   left: '←',
@@ -57,6 +58,8 @@ export function eventLine(e: PlayEvent, style: Style): string {
     switch (e.kind) {
       case 'heard':
         return style.bold(text);
+      case 'acted':
+        return style.cyan(text);
       case 'learned':
         return style.magenta(text);
       case 'relation':

@@ -177,4 +177,48 @@ describe('serveur de jeu', () => {
     expect((await fetch(`${base}/api/session/${id}`, { method: 'DELETE' })).status).toBe(200);
     expect((await fetch(`${base}/api/session/${id}/status`)).status).toBe(404);
   }, 60_000);
+
+  it('publie le lieu et les départs avant la demande du même tick, sur plusieurs ticks', async () => {
+    const { base, post } = await start();
+    const { id } = (await (await post('/api/session', { character: 'sarah', seed: 'srv3' })).json()) as { id: string };
+    const events = await openEvents(base, id);
+    const answerWith = async (label: string | null): Promise<{ kind: string; tick: number }> => {
+      const r = (await events.next('request')).data as {
+        id: string;
+        kind: string;
+        tick: number;
+        options: { n: number; label: string }[];
+      };
+      const n = (label === null ? undefined : r.options.find((o) => o.label.startsWith(label))?.n) ?? 1;
+      await post(`/api/session/${id}/answer`, { requestId: r.id, choice: n });
+      return r;
+    };
+    const texts = (): string[] =>
+      events.seen.filter((e) => e.event === 'play').map((e) => (e.data as { text: string }).text);
+
+    await answerWith('Aller : Salon');
+    // La demande d'action du tick 0 arrive : le lieu est déjà dans le fil.
+    const first = await events.next('request');
+    expect(texts().some((t) => t.startsWith('Lieu : Salon'))).toBe(true);
+    await post(`/api/session/${id}/answer`, { requestId: (first.data as { id: string }).id, choice: 1 });
+
+    // Puis Confessionnal : départ du Salon et arrivée annoncés avant la demande d'action de l'arrivée.
+    for (let guard = 0; guard < 6 && !texts().some((t) => t.startsWith('Lieu : Confessionnal')); guard++) {
+      const r = (await events.next('request')).data as {
+        id: string;
+        kind: string;
+        options: { n: number; label: string }[];
+      };
+      const go =
+        r.kind === 'destination' ? r.options.find((o) => o.label.startsWith('Aller : Confessionnal'))?.n : undefined;
+      await post(`/api/session/${id}/answer`, { requestId: r.id, choice: go ?? 1 });
+    }
+    // Rien n'est encore passé à la demande suivante : le fil contient déjà tout ce que le joueur a vécu.
+    const all = texts();
+    expect(all.findIndex((t) => t.startsWith('Tu quittes : Salon'))).toBeGreaterThan(-1);
+    expect(all.findIndex((t) => t.startsWith('Lieu : Confessionnal'))).toBeGreaterThan(
+      all.findIndex((t) => t.startsWith('Tu quittes : Salon')),
+    );
+    events.close();
+  });
 });
