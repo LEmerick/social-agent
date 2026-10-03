@@ -6,8 +6,7 @@
  * (`journal.commitTick`), ce qui positionne `last_committed_tick`. La clôture est une dernière transaction.
  *
  * Reprise : `resume(epochId)` recharge l'état (`loadSimStateWithRuntime`) et la timeline ouverte du journal,
- * puis repart à `last_committed_tick + 1`. Le numéro de saison est relu dans `rng_seed` (`<graine>|season:<n>|epoch:<n>`),
- * car `SeasonRepository` ne sait pas chercher par identifiant.
+ * puis repart à `last_committed_tick + 1`. La saison est relue par `seasons.findById`.
  */
 import { DomainError } from '../core/errors.js';
 import { simIdFactory } from '../core/sim-ids.js';
@@ -109,7 +108,7 @@ async function initialise(deps: EpochSchedulerDeps, bus: EngineBus, target: Targ
         seasonId: state.season.id,
         number: target.number,
         status: 'running',
-        rngSeed: `${state.world.seed}|season:${String(target.seasonNumber)}|epoch:${String(target.number)}`,
+        rngSeed: `${state.world.seed}|epoch:${String(target.number)}`,
         rulesVersion: state.season.rulesVersion,
         lastCommittedTick: -1,
       }),
@@ -120,12 +119,11 @@ async function initialise(deps: EpochSchedulerDeps, bus: EngineBus, target: Targ
     const record = await storage.tx((s) => s.epochs.findById(target.epochId));
     if (!record) throw new DomainError('NOT_FOUND', `Époque ${target.epochId} introuvable`);
     if (record.status === 'completed') throw new DomainError('EPOCH_COMPLETED', `L'époque ${record.id} est terminée`);
-    const seasonNumber = /\|season:(\d+)\|epoch:\d+$/.exec(record.rngSeed)?.[1];
-    if (seasonNumber === undefined)
-      throw new DomainError('INVALID_EPOCH', `Graine d'époque illisible : ${record.rngSeed}`);
+    const season = await storage.tx((s) => s.seasons.findById(record.seasonId));
+    if (!season) throw new DomainError('NOT_FOUND', `Saison ${record.seasonId} introuvable`);
 
     const midway = record.lastCommittedTick >= 0;
-    ({ state, transitZones } = await loadSimStateWithRuntime(storage, record.worldId, Number(seasonNumber), {
+    ({ state, transitZones } = await loadSimStateWithRuntime(storage, record.worldId, season.number, {
       epochNumber: record.number,
       resume: midway,
     }));

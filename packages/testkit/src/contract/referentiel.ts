@@ -73,6 +73,8 @@ export function referentielContract(h: HarnessRef): void {
       });
       expect(await h().storage.tx((s) => s.seasons.findByNumber(WORLD.id, 1))).toEqual(SEASON);
       expect(await h().storage.tx((s) => s.seasons.findByNumber(WORLD.id, 2))).toBeUndefined();
+      expect(await h().storage.tx((s) => s.seasons.findById(SEASON.id))).toEqual(SEASON);
+      expect(await h().storage.tx((s) => s.seasons.findById(fixedId(0, 99)))).toBeUndefined();
     });
 
     it('un numéro de saison déjà pris est rejeté (DUPLICATE) ; un monde inconnu aussi (NOT_FOUND)', async () => {

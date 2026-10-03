@@ -1,6 +1,7 @@
-import type { DirectiveRecord, GoalRecord, StorageTx } from '@ai-reality/engine';
+import type { DirectiveRecord, GoalRecord, SeasonRecord, StorageTx } from '@ai-reality/engine';
 import type { DirectiveBiases } from '@ai-reality/engine';
 import type { Prisma } from '@prisma/client';
+import type { JsonValue } from '@prisma/client/runtime/library';
 import { type Db, asRecord, cmp, guard, toNullableJson } from './support.js';
 
 type RefRepos = Pick<
@@ -35,16 +36,11 @@ export function refRepos(db: Db): RefRepos {
       },
       async findByNumber(worldId, number) {
         const row = await db.season.findUnique({ where: { worldId_number: { worldId, number } } });
-        return row
-          ? {
-              id: row.id,
-              worldId: row.worldId,
-              number: row.number,
-              rules: asRecord(row.rules),
-              rulesVersion: row.rulesVersion,
-              format: asRecord(row.format),
-            }
-          : undefined;
+        return row ? toSeasonRecord(row) : undefined;
+      },
+      async findById(id) {
+        const row = await db.season.findUnique({ where: { id } });
+        return row ? toSeasonRecord(row) : undefined;
       },
       async updateRules(id, rules, rulesVersion) {
         await guard(() =>
@@ -210,5 +206,23 @@ function toCharacterRecord(row: CharacterRow) {
     autonomy: row.autonomy,
     status: row.status,
     traits: Object.fromEntries(row.traits.map((t) => [t.trait, t.value])),
+  };
+}
+
+function toSeasonRecord(row: {
+  id: string;
+  worldId: string;
+  number: number;
+  rules: JsonValue;
+  rulesVersion: number;
+  format: JsonValue;
+}): SeasonRecord {
+  return {
+    id: row.id,
+    worldId: row.worldId,
+    number: row.number,
+    rules: asRecord(row.rules),
+    rulesVersion: row.rulesVersion,
+    format: asRecord(row.format),
   };
 }
