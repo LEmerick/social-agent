@@ -37,13 +37,13 @@ Une action est ce qu'un personnage **décide de faire**. Le dialogue n'est que l
 | `express_feelings` | relationnel | 1 | affection ≥ 30 | énergie 2 | zone |
 | `apologize` | relationnel | 1 | interaction négative passée | énergie 1 | zone |
 | `provoke` / `insult` | compétitif | 1 | — | énergie 2 | scène |
-| `propose_alliance` | stratégique | 1 | pas déjà alliés | énergie 2 | zone |
+| `propose_alliance` | stratégique | 1 | pas déjà alliés, une seule proposition par cible et par jour | énergie 2 | zone |
 | `break_alliance` | stratégique | 1 | alliance ≥ 50 | énergie 2 | zone |
 | `request_favor` | stratégique | 1 | — | énergie 1 | zone |
 | `negotiate_vote` | stratégique | 1 | créneau de vote à venir | énergie 2 | zone |
-| `share_secret` | informationnel | 1 | connaît le fait (`knowledge`) | énergie 1 | zone |
-| `spread_rumor` | informationnel | 1 | — (crée un `fact` faux) | énergie 1 | zone |
-| `lie` | informationnel | 1 | — | énergie 1 | zone |
+| `share_secret` | informationnel | 1 | connaît le fait (`knowledge`) ; la cible n'en est ni le sujet ni l'objet et ne le sait pas déjà de lui (il le lui a dit, ou ils l'ont appris au même event) | énergie 1 | zone |
+| `spread_rumor` | informationnel | 1 | un tiers existe (crée un `fact` faux sur lui, réutilisé s'il existe déjà) | énergie 1 | zone |
+| `lie` | informationnel | 1 | un tiers existe (« l'acteur est secrètement allié à X ») | énergie 1 | zone |
 | `deflect` (esquiver un sujet) | informationnel | 1 | — | 0 | zone |
 | `confront` / `accuse` | compétitif | 1 | — | énergie 3 | scène |
 | `threaten` | compétitif | 1 | — | énergie 2 | zone |

@@ -3,7 +3,8 @@
  * Toutes lisent un `SimState` sans le modifier.
  */
 import { defaultEdge } from '../state/apply-effect.js';
-import { relKey, type Id, type RelationshipEdge, type SimState } from '../state/types.js';
+import { dailyCount, habituationKey } from '../resolution/habituation.js';
+import { relKey, type Id, type KnowledgeEdge, type RelationshipEdge, type SimState } from '../state/types.js';
 import type { Precondition, SceneContext, SceneParticipant } from './types.js';
 
 /** Arête source→cible, ou arête par défaut si elles ne se connaissent pas encore (sans l'insérer). */
@@ -32,10 +33,55 @@ export const hasNegativePast = (state: Readonly<SimState>, actorId: Id, targetId
   return back.trust < 30 || back.rivalry >= 20 || back.affection < 0 || forth.rivalry >= 20;
 };
 
+/**
+ * Personnage hors acteur et cible, en jeu, qui maximise `score` (à égalité, l'identifiant le plus petit), ou `null`.
+ * Sert à choisir de qui parle une rumeur ou un mensonge : jamais l'interlocuteur, à qui on ne « raconte » pas sa propre vie.
+ */
+const thirdParty = (state: Readonly<SimState>, actorId: Id, targetId: Id, score: (id: Id) => number): Id | null =>
+  Object.keys(state.characters)
+    .sort()
+    .filter((id) => id !== actorId && id !== targetId && inGame(state, id))
+    .reduce<Id | null>((best, id) => (best === null || score(id) > score(best) ? id : best), null);
+
+/** Sujet d'une rumeur : le tiers que l'acteur déteste le plus (rivalité la plus haute). */
+export const rumorSubject = (state: Readonly<SimState>, actorId: Id, targetId: Id): Id | null =>
+  thirdParty(state, actorId, targetId, (id) => relOf(state, actorId, id).rivalry);
+
+/** Complice prétendu d'un mensonge « l'acteur est secrètement allié à X » : le tiers qu'il apprécie le plus. */
+export const liePartner = (state: Readonly<SimState>, actorId: Id, targetId: Id): Id | null =>
+  thirdParty(state, actorId, targetId, (id) => relOf(state, actorId, id).affection);
+
 const believesFact = (state: Readonly<SimState>, characterId: Id, factId: Id): boolean =>
   Object.values(state.knowledge).some(
     (k) => k.characterId === characterId && k.factId === factId && k.belief !== 'disbelieves',
   );
+
+/**
+ * L'émetteur sait que la cible connaît déjà ce fait : il le lui a dit (connaissance `told` de la cible dont il est
+ * l'émetteur) ou il l'a vue l'apprendre, c'est-à-dire qu'elle en a été témoin direct lors d'un event par lequel il l'a lui-même appris.
+ */
+export const targetKnowsFromSender = (state: Readonly<SimState>, senderId: Id, targetId: Id, factId: Id): boolean => {
+  const mine = new Set<Id | null>();
+  const theirs: KnowledgeEdge[] = [];
+  for (const k of Object.values(state.knowledge)) {
+    if (k.factId !== factId) continue;
+    if (k.characterId === senderId && k.viaEventId !== null) mine.add(k.viaEventId);
+    else if (k.characterId === targetId) theirs.push(k);
+  }
+  return theirs.some(
+    (k) => k.toldById === senderId || (k.sourceType === 'witnessed' && k.viaEventId !== null && mine.has(k.viaEventId)),
+  );
+};
+
+/** Un fait qu'on peut confier à la cible : elle n'en est ni le sujet ni l'objet (sinon : `confront`) et ne le sait pas. */
+const tellable = (state: Readonly<SimState>, senderId: Id, targetId: Id, factId: Id): boolean => {
+  const fact = state.facts[factId];
+  return (
+    fact?.subjectId !== targetId &&
+    fact?.objectId !== targetId &&
+    !targetKnowsFromSender(state, senderId, targetId, factId)
+  );
+};
 
 const ownsItem = (ctx: SceneContext, characterId: Id, itemId: Id | null): boolean =>
   itemId !== null && (ctx.inventory?.[characterId] ?? []).includes(itemId);
@@ -51,10 +97,19 @@ export const PRE = {
   proposeAlliance: (s, a, o, c) =>
     sceneTarget(s, a, o, c) &&
     relOf(s, a, o.targetId ?? '').alliance < 50 &&
-    relOf(s, o.targetId ?? '', a).alliance < 50,
+    relOf(s, o.targetId ?? '', a).alliance < 50 &&
+    // Une seule proposition par cible et par jour : déjà acceptée (alliés de fait) ou refusée (insister est vain).
+    dailyCount(s, habituationKey(a, 'propose_alliance', o.targetId)) === 0,
   breakAlliance: (s, a, o, c) => sceneTarget(s, a, o, c) && relOf(s, a, o.targetId ?? '').alliance >= 50,
   negotiateVote: (s, a, o, c) => sceneTarget(s, a, o, c) && c.voteUpcoming === true,
-  shareSecret: (s, a, o, c) => sceneTarget(s, a, o, c) && o.factId !== null && believesFact(s, a, o.factId),
+  shareSecret: (s, a, o, c) =>
+    sceneTarget(s, a, o, c) &&
+    o.factId !== null &&
+    believesFact(s, a, o.factId) &&
+    tellable(s, a, o.targetId ?? '', o.factId),
+  /** Une rumeur parle d'un tiers : il faut un sujet possible hors acteur et cible. */
+  spreadRumor: (s, a, o, c) => sceneTarget(s, a, o, c) && rumorSubject(s, a, o.targetId ?? '') !== null,
+  lie: (s, a, o, c) => sceneTarget(s, a, o, c) && liePartner(s, a, o.targetId ?? '') !== null,
   /** Confrontation : avec un fait, l'accusateur doit le tenir pour vrai ou douteux (jamais un fait qu'il sait faux). */
   confront: (s, a, o, c) => sceneTarget(s, a, o, c) && (o.factId === null || believesFact(s, a, o.factId)),
   challenge: (s, a, o, c) => sceneTarget(s, a, o, c) && c.activityAvailable === true,

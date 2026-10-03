@@ -13,16 +13,19 @@
  * Tout est écrit dans le lot du tick (`batch.facts`, `batch.knowledge`), `via_event_id` = event de l'interaction.
  * `overhear` applique l'écoute indiscrète : sans détection, l'écouteur apprend ce que la cible a dit ou entendu ce tick.
  */
+import { DomainError } from '../core/errors.js';
 import type { TickContext } from '../epoch/types.js';
 import type { ActionOption } from '../decision/ports.js';
 import {
   type KnowledgeListener,
   type PropagationResult,
   bestEdge,
+  knows,
   clearExecutedTells,
   createFact,
   createRumor,
   falseFact,
+  findFact,
   notableFact,
   transmit,
   witness,
@@ -30,7 +33,7 @@ import {
 import type { ActionDef } from '../rules/types.js';
 import type { Listener } from '../scene/audience.js';
 import type { EventRecord } from '../state/journal.js';
-import type { Belief, Id } from '../state/types.js';
+import type { Belief, Id, KnowledgeEdge } from '../state/types.js';
 import type { UtteranceDraft } from './dialogue.js';
 
 /** Actions dont le fait (`option.factId`) est dit à la cible. */
@@ -180,20 +183,39 @@ export function propagateInteraction(ctx: TickContext, a: PropagationArgs): Prop
 
   // 1. Fait créé par l'interaction.
   if (targetId !== null && (def.id === 'spread_rumor' || def.id === 'lie')) {
-    const { fact, knowledge } = createRumor(
-      state,
-      {
-        ...falseFact(state, def.id, actorId, targetId, def.defaultVolume),
-        originEventId: event.id,
-        inventorId: actorId,
-        epoch: ctx.epochNumber,
-        tick: ctx.tick,
-      },
-      factIds,
-    );
-    batch.facts.push(fact);
-    batch.knowledge.push(knowledge);
-    report.created.push(fact.id);
+    const draft = {
+      ...falseFact(state, def.id, actorId, targetId, def.defaultVolume),
+      originEventId: event.id,
+      inventorId: actorId,
+      epoch: ctx.epochNumber,
+      tick: ctx.tick,
+    };
+    // Une même rumeur répétée réutilise le fait ; l'inventeur n'y gagne une connaissance que s'il l'ignorait.
+    const existing = findFact(state, draft, false);
+    const made = existing ? undefined : createRumor(state, draft, factIds);
+    const fact = existing ?? made?.fact;
+    if (!fact) throw new DomainError('NOT_FOUND', 'Rumeur introuvable après création');
+    if (made) {
+      batch.facts.push(made.fact);
+      batch.knowledge.push(made.knowledge);
+      report.created.push(fact.id);
+    } else if (!knows(state, actorId, fact.id)) {
+      const inferred: KnowledgeEdge = {
+        id: knowledgeIds.next(),
+        characterId: actorId,
+        factId: fact.id,
+        sourceType: 'inferred',
+        toldById: null,
+        viaEventId: event.id,
+        parentKnowledgeId: null,
+        learnedEpoch: ctx.epochNumber,
+        learnedTick: ctx.tick,
+        confidence: 1,
+        belief: 'disbelieves',
+      };
+      state.knowledge[inferred.id] = inferred;
+      batch.knowledge.push(inferred);
+    }
     carried.push(fact.id);
     keep(
       transmit(
@@ -211,25 +233,21 @@ export function propagateInteraction(ctx: TickContext, a: PropagationArgs): Prop
   } else {
     const notable = notableFact(def.id, def.defaultVolume);
     if (notable) {
-      const fact = createFact(
-        state,
-        {
-          subjectId: actorId,
-          predicate: notable.predicate,
-          objectId: targetId,
-          sensitivity: notable.sensitivity,
-          originEventId: event.id,
-        },
-        factIds,
-      );
+      const spec = { subjectId: actorId, predicate: notable.predicate, objectId: targetId };
+      // Répéter l'action ne crée pas un nouveau fait : les témoins de cet event apprennent le fait existant.
+      const existing = findFact(state, spec, true);
+      const fact =
+        existing ?? createFact(state, { ...spec, sensitivity: notable.sensitivity, originEventId: event.id }, factIds);
       const seesTarget = targetId !== null && (!hidden || outcome === 'detected');
       const witnesses: Listener[] = [
         { characterId: actorId, perception: 'hears' },
         ...(seesTarget ? [{ characterId: targetId, perception: 'hears' as const }] : []),
         ...a.heard,
       ];
-      batch.facts.push(fact);
-      report.created.push(fact.id);
+      if (!existing) {
+        batch.facts.push(fact);
+        report.created.push(fact.id);
+      }
       carried.push(fact.id);
       keep(witness(state, { factIds: [fact.id], witnesses, ...when }, knowledgeIds));
     }
@@ -245,13 +263,22 @@ export function propagateInteraction(ctx: TickContext, a: PropagationArgs): Prop
     const own = r.speakerId === actorId;
     const confronted = own && CONFRONTATIONS.has(def.id) ? targetId : null;
     // Le confronté reçoit la provenance même s'il connaît déjà le fait : l'arête garde le chemin de l'accusateur.
+    // Sauf si l'accusateur en est lui-même un protagoniste (sujet ou objet) et que le confronté le sait déjà : on ne
+    // lui « raconte » pas ce qu'ils ont vécu ensemble.
     const heardBy = audience.map(role);
     const rest = heardBy.filter((l) => l.characterId !== confronted);
     const input = { factIds: r.factIds, fromId: r.speakerId, ...when };
     const extra = own && belief ? { addresseeBelief: belief } : {};
     keep(transmit(state, { ...input, listeners: rest, skipKnown: true, ...extra }, knowledgeIds));
     const direct = heardBy.filter((l) => l.characterId === confronted);
-    if (direct.length > 0) keep(transmit(state, { ...input, listeners: direct }, knowledgeIds));
+    const unknown = r.factIds.filter((f) => {
+      const fact = state.facts[f];
+      const shared = fact?.subjectId === r.speakerId || fact?.objectId === r.speakerId;
+      return confronted !== null && !(shared && knows(state, confronted, f));
+    });
+    if (direct.length > 0 && unknown.length > 0) {
+      keep(transmit(state, { ...input, factIds: unknown, listeners: direct }, knowledgeIds));
+    }
     for (const l of heardBy) {
       if (l.role === 'addressee') clearExecutedTells(state, r.speakerId, l.characterId, r.factIds);
     }

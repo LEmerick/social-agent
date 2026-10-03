@@ -15,7 +15,14 @@ export { assertAllowed, availableOptions, costRefusal, effectiveCost, refusalRea
 export { type ResolveInput, type Resolution, refreshLabels, resolveInteraction } from '../resolution/resolve.js';
 export { type RuleDef, RULE_TABLE, ruleFor, ruleId } from '../resolution/table.js';
 export { eventTypeFor, importanceFor } from '../resolution/events-map.js';
-export { HABITUATION_RULE, dailyCount, habituationFactor, habituationKey } from '../resolution/habituation.js';
+export {
+  HABITUATION_RULE,
+  dailyCount,
+  habituationFactor,
+  habituationKey,
+  lastKey,
+  ticksSinceLast,
+} from '../resolution/habituation.js';
 export type { DraftEffect, Kit, RuleCtx, RuleFn, RuleSet } from '../resolution/kit.js';
 export { COST_RULE, chargeAction, closingBalance, costEffect } from '../economy/charge.js';
 export { type SettleOptions, type SettleResult, SURVIVAL_RULE, UPKEEP_RULE, settleEpoch } from '../economy/settle.js';
