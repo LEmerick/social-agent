@@ -1,8 +1,8 @@
 {
-  "name": "@ai-reality/testkit",
+  "name": "@ai-reality/llm-anthropic",
   "version": "0.0.0",
   "private": true,
-  "description": "Fixtures, builders et doubles de test (dépendance de développement uniquement)",
+  "description": "Adaptateur LLMPort pour Claude (SDK Anthropic)",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -20,10 +20,11 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@ai-reality/engine": "workspace:*"
+    "@ai-reality/engine": "workspace:*",
+    "@anthropic-ai/sdk": "^0.131.0"
   },
   "devDependencies": {
-    "fast-check": "^4.10.2",
+    "@ai-reality/testkit": "workspace:*",
     "vitest": "^5.0.3"
   }
 }
