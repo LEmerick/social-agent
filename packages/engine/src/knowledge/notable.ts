@@ -6,7 +6,7 @@
  * (bornée à 0..3). Une proposition d'alliance chuchotée vaut 2 : assez pour déclencher une intention `tell`.
  */
 import type { ActionVolume } from '../rules/types.js';
-import { relOf } from '../rules/preconditions.js';
+import { liePartner, rumorSubject } from '../rules/preconditions.js';
 import type { Id, SimState } from '../state/types.js';
 import type { FactInput } from './facts.js';
 
@@ -46,10 +46,12 @@ export function notableFact(action: string, volume: ActionVolume): NotableFact |
 }
 
 /**
- * Contenu d'une rumeur ou d'un mensonge (faits faux), déterministe :
- * - `spread_rumor` : « S aurait trahi la cible », S = le personnage (hors acteur et cible) que l'acteur déteste le plus ;
- *   à défaut de tiers, la cible « aurait menti à toute la maison » ;
- * - `lie` : « l'acteur est secrètement allié à la cible ».
+ * Contenu d'une rumeur ou d'un mensonge (faits faux), déterministe. Jamais un fait sur l'interlocuteur : on ne lui
+ * « raconte » pas sa propre vie (les préconditions `spreadRumor` / `lie` garantissent un tiers) :
+ * - `spread_rumor` : « S aurait trahi toute la maison », S = le tiers (hors acteur et cible) que l'acteur déteste le plus ;
+ * - `lie` : « l'acteur est secrètement allié à X », X = le tiers (hors acteur et cible) qu'il apprécie le plus.
+ * Sans tiers (impossible si l'action est permise), la cible « aurait menti à toute la maison » (rumeur) ou le mensonge
+ * devient « l'acteur est secrètement allié à toute la maison ».
  */
 export function falseFact(
   state: Readonly<SimState>,
@@ -60,17 +62,13 @@ export function falseFact(
 ): FactInput {
   const sensitivity = sensitivityFor(2, volume);
   if (action === 'lie') {
-    return { subjectId: actorId, predicate: 'est secrètement allié à', objectId: targetId, sensitivity };
+    const partner = liePartner(state, actorId, targetId);
+    return partner === null
+      ? { subjectId: actorId, predicate: 'est secrètement allié à', objectText: 'toute la maison', sensitivity }
+      : { subjectId: actorId, predicate: 'est secrètement allié à', objectId: partner, sensitivity };
   }
-  const third = Object.keys(state.characters)
-    .sort()
-    .filter((id) => id !== actorId && id !== targetId && state.characters[id]?.status !== 'eliminated')
-    .reduce<Id | null>(
-      (best, id) =>
-        best === null || relOf(state, actorId, id).rivalry > relOf(state, actorId, best).rivalry ? id : best,
-      null,
-    );
+  const third = rumorSubject(state, actorId, targetId);
   return third === null
     ? { subjectId: targetId, predicate: 'aurait menti à', objectText: 'toute la maison', sensitivity }
-    : { subjectId: third, predicate: 'aurait trahi', objectId: targetId, sensitivity };
+    : { subjectId: third, predicate: 'aurait trahi', objectText: 'toute la maison', sensitivity };
 }

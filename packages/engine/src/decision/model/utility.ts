@@ -1,7 +1,7 @@
 /**
  * Utilité d'une option pour un personnage (decision-model.md §2) :
  *
- *   U = base + traits + relation + objectifs + agenda + directive + issue espérée − coût − habituation
+ *   U = base + traits + relation + objectifs + agenda + directive + issue espérée − coût − habituation − répétition
  *
  * Tout est lu dans le `SimState` (jamais de hasard, jamais d'écriture) ; la décomposition est rendue terme à terme
  * pour la traçabilité et pour les tests.
@@ -9,7 +9,7 @@
 import { relOf } from '../../rules/preconditions.js';
 import { actionDef } from '../../rules/catalog.js';
 import { effectiveCost } from '../../rules/options.js';
-import { dailyCount, habituationKey } from '../../resolution/habituation.js';
+import { dailyCount, habituationKey, ticksSinceLast } from '../../resolution/habituation.js';
 import type { ActionOption } from '../ports.js';
 import type { CharacterNode, Id, SimState } from '../../state/types.js';
 import { ProbabilisticOutcomeModel } from './probabilistic-outcome.js';
@@ -20,8 +20,10 @@ import { centered, clamp, weightsOf } from './weights.js';
 export interface UtilityConfig {
   /** Poids de l'issue espérée (valence moyenne). Défaut 1,2, atténué par l'impulsivité (l'impulsif ignore le risque). */
   readonly outcomeWeight?: number;
-  /** Pénalité par répétition du jour (même acteur, action, cible). Défaut 0,4. */
+  /** Pénalité par répétition du jour (même acteur, action, cible). Défaut 0,6. */
   readonly habituationPenalty?: number;
+  /** Pénalité d'une répétition immédiate (même acteur, action, cible au tick précédent). Défaut 1, décroît sur `REPETITION_WINDOW` ticks. */
+  readonly repetitionPenalty?: number;
   /** Modèle d'issues utilisé pour l'issue espérée. */
   readonly outcomes?: ProbabilisticOutcomeModel;
 }
@@ -38,9 +40,21 @@ export interface UtilityBreakdown {
     readonly outcome: number;
     readonly cost: number;
     readonly habituation: number;
+    readonly repetition: number;
   };
   /** Vrai si la directive interdit l'option (utilité `-Infinity`). */
   readonly forbidden: boolean;
+}
+
+/** Nombre de ticks au-delà duquel refaire la même action vers la même cible n'est plus une « répétition ». */
+export const REPETITION_WINDOW = 6;
+
+/** Pénalité de répétition : pleine si l'action vient d'être faite au tick précédent, nulle après `REPETITION_WINDOW` ticks. */
+function repetitionTerm(state: Readonly<SimState>, actorId: Id, option: ActionOption, penalty: number): number {
+  if (option.targetId === null) return 0;
+  const gap = ticksSinceLast(state, actorId, option.action, option.targetId);
+  if (gap === null || gap < 1 || gap > REPETITION_WINDOW) return 0;
+  return -penalty * (1 - (gap - 1) / REPETITION_WINDOW);
 }
 
 const DEFAULT_OUTCOMES = new ProbabilisticOutcomeModel();
@@ -147,6 +161,7 @@ export function utilityBreakdown(
     outcome: 0,
     cost: 0,
     habituation: 0,
+    repetition: 0,
   };
   if (!actor || !def) return { total: -Infinity, terms: zero, forbidden: false };
 
@@ -174,7 +189,8 @@ export function utilityBreakdown(
       : 0,
     cost: energyCost + creditCost,
     habituation:
-      -(config.habituationPenalty ?? 0.4) * dailyCount(state, habituationKey(actorId, option.action, option.targetId)),
+      -(config.habituationPenalty ?? 0.6) * dailyCount(state, habituationKey(actorId, option.action, option.targetId)),
+    repetition: repetitionTerm(state, actorId, option, config.repetitionPenalty ?? 1),
   };
   const total = directive.forbidden ? -Infinity : Object.values(terms).reduce((s, v) => s + v, 0);
   return { total, terms, forbidden: directive.forbidden };

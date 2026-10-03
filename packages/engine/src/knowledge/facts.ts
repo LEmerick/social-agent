@@ -52,6 +52,25 @@ function buildFact(state: Readonly<SimState>, input: FactInput, ids: IdFactory, 
   };
 }
 
+/**
+ * Fait déjà existant de même (sujet, prédicat, objet) et de même véracité, ou `undefined`. Un fait notable ne se
+ * duplique pas : une répétition de l'action apporte une connaissance de plus (nouvel event), pas un nouveau fait.
+ */
+export function findFact(
+  state: Readonly<SimState>,
+  spec: Pick<FactInput, 'subjectId' | 'predicate' | 'objectId' | 'objectText'>,
+  isTrue: boolean,
+): FactNode | undefined {
+  return Object.values(state.facts).find(
+    (f) =>
+      f.isTrue === isTrue &&
+      f.predicate === spec.predicate &&
+      f.subjectId === (spec.subjectId ?? null) &&
+      f.objectId === (spec.objectId ?? null) &&
+      f.objectText === (spec.objectText ?? null),
+  );
+}
+
 /** Crée un fait vrai. Personne ne le connaît encore : `witness` / `transmit` créent les connaissances. */
 export function createFact(state: SimState, input: FactInput, ids: IdFactory): FactNode {
   const fact = buildFact(state, input, ids, {});

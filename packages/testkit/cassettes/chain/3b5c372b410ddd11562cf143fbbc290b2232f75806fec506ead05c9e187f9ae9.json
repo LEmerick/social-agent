@@ -1,13 +1,13 @@
 {
   "model": "scripted-chain",
-  "promptHash": "6161ac8e29615df51baebad1a725838c5e1937623531288a8994dc97739236d7",
+  "promptHash": "3b5c372b410ddd11562cf143fbbc290b2232f75806fec506ead05c9e187f9ae9",
   "purpose": "evaluate",
   "request": {
     "effort": "low",
     "maxTokens": 2000,
     "messages": [
       {
-        "content": "Choisis ce que ton personnage fait maintenant, parmi ces options (et seulement celles-ci) :\n1. small_talk → Alexandre\n2. compliment → Alexandre\n3. probe → Alexandre\n4. flirt → Alexandre\n5. provoke → Alexandre\n6. insult → Alexandre\n7. propose_alliance → Alexandre\n8. request_favor → Alexandre\n9. share_secret → Alexandre (fait : Alexandre a proposé une alliance à Sarah)\n10. spread_rumor → Alexandre\n11. lie → Alexandre\n12. deflect → Alexandre\n13. confront → Alexandre\n14. confront → Alexandre (fait : Alexandre a proposé une alliance à Sarah)\n15. accuse → Alexandre\n16. accuse → Alexandre (fait : Alexandre a proposé une alliance à Sarah)\n17. threaten → Alexandre\n18. sabotage → Alexandre\n19. avoid → Alexandre\n20. rest\n0. none — ne rien faire\nRéponds : {\"choice\":\"<numéro ou none>\",\"distribution\":[{\"choice\":\"<numéro>\",\"p\":0.0}],\"reason\":\"<une phrase>\"}.\n`distribution` (facultative) donne tes probabilités par numéro ; `choice` est l’option retenue.",
+        "content": "Choisis ce que ton personnage fait maintenant, parmi ces options (et seulement celles-ci) :\n1. small_talk → Alexandre\n2. compliment → Alexandre\n3. probe → Alexandre\n4. flirt → Alexandre\n5. apologize → Alexandre\n6. provoke → Alexandre\n7. insult → Alexandre\n8. propose_alliance → Alexandre\n9. request_favor → Alexandre\n10. spread_rumor → Alexandre\n11. lie → Alexandre\n12. deflect → Alexandre\n13. confront → Alexandre\n14. confront → Alexandre (fait : Alexandre a proposé une alliance à Sarah)\n15. accuse → Alexandre\n16. accuse → Alexandre (fait : Alexandre a proposé une alliance à Sarah)\n17. threaten → Alexandre\n18. sabotage → Alexandre\n19. avoid → Alexandre\n20. rest\n0. none — ne rien faire\nRéponds : {\"choice\":\"<numéro ou none>\",\"distribution\":[{\"choice\":\"<numéro>\",\"p\":0.0}],\"reason\":\"<une phrase>\"}.\n`distribution` (facultative) donne tes probabilités par numéro ; `choice` est l’option retenue.",
         "role": "user"
       }
     ],
@@ -49,13 +49,13 @@
     },
     "system": {
       "stable": "Tu es Thomas (31 ans, homme, originaire de Marseille).\n\nTon tempérament :\n- Charisme (65/100) : Tu as une présence correcte, sans éclipser personne.\n- Ambition (70/100) : Tu veux gagner, monter et être décisif ; tu planifies à long terme.\n- Empathie (30/100) : Tu perçois mal les émotions des autres et tu t’en soucies peu.\n- Loyauté (50/100) : Tu es fidèle à tes alliés tant que le prix reste raisonnable.\n- Impulsivité (65/100) : Tu pèses tes réponses, mais tu peux t’emporter sous pression.\n- Manipulation (40/100) : Tu sais arrondir la vérité quand c’est utile.\n- Sociabilité (55/100) : Tu parles volontiers aux gens que tu connais déjà.\n- Compétitivité (85/100) : Tu vis tout comme un duel et tu supportes mal d’être battu, surtout par un rival.\n\nTa façon de parler : vif, taquin\n\nTu ne sais que ce que ton personnage a vécu ou appris. Tu ne révèles jamais un fait que tu ignores, et tu restes cohérent avec ton tempérament.\n\nCadre : tu participes à une télé-réalité fictive, entouré d’autres candidats. Tout se passe en français.\nRègles absolues :\n1. Tu n’utilises que ce que contient la section « Ce que vous savez » et ce que tu as vécu ; tu n’inventes aucun fait.\n2. Tu ne révèles jamais un fait absent de cette liste ; quand tu en évoques un, cite son identifiant entre crochets dans `reveals`.\n3. Tu restes cohérent avec ton tempérament et tes relations.\n4. Tu réponds uniquement par un JSON valide conforme au schéma demandé, sans texte autour.",
-      "variable": "Vous êtes Thomas (thomas).\nTraits : charisma 65, ambition 70, empathy 30, loyalty 50, impulsivity 65, manipulation 40, sociability 55, competitiveness 85.\nÉtat : energy 100, morale 60, popularity 50, influence 50, reputation 50 ; crédits 100.\n\nObjectifs :\n- (social) Dépasser Alexandre — visant Alexandre\n\nIntentions en cours :\n- aucune\n\nVos relations (votre ressenti) :\n- Léa (met) : trust 35, affection 3, rivalry 0, respect 50, fear 0, attraction 0, alliance 0\n\nCe que vous savez (et rien de plus) :\n- [019b7892-1c00-71ea-b757-8e6b00545440] Alexandre a proposé une alliance à Sarah (sensible ; confiance 60 %, vous y croyez ; raconté par Léa, époque 0, tick 5)\n\nSituation :\nLieu : Jardin.\nPrésents : Alexandre."
+      "variable": "Vous êtes Thomas (thomas).\nTraits : charisma 65, ambition 70, empathy 30, loyalty 50, impulsivity 65, manipulation 40, sociability 55, competitiveness 85.\nÉtat : energy 97, morale 60, popularity 50, influence 50, reputation 50 ; crédits 100.\nHumeur : anger 3.\n\nObjectifs :\n- (social) Dépasser Alexandre — visant Alexandre\n\nIntentions en cours :\n- aucune\n\nVos relations (votre ressenti) :\n- Alexandre (met) : trust 22, affection 0, rivalry 6, respect 50, fear 0, attraction 0, alliance 0\n- Léa (met) : trust 35, affection 3, rivalry 0, respect 50, fear 0, attraction 0, alliance 0\n\nCe que vous savez (et rien de plus) :\n- [019b7892-1c00-71ea-b757-8e6b00545440] Alexandre a proposé une alliance à Sarah (sensible ; confiance 60 %, vous y croyez ; raconté par Léa, époque 0, tick 5)\n- [019b7952-5ec0-7f21-a33b-5eb448f0187e] Thomas a confronté Alexandre (public ; confiance 100 %, vous y croyez ; vu ou entendu de vos propres yeux, époque 0, tick 7)\n\nSituation :\nLieu : Jardin.\nPrésents : Alexandre."
     },
     "temperature": null,
     "tier": "dialogue"
   },
   "response": {
-    "text": "{\"choice\":\"14\",\"reason\":\"C’est le moment.\"}"
+    "text": "{\"choice\":\"none\"}"
   },
   "usage": {
     "cachedTokens": 0,

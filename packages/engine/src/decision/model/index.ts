@@ -20,6 +20,7 @@ export { type Coeffs, coeffsOf } from './probabilistic-coeffs.js';
 export { PROBABILISTIC_OUTCOME_POLICY, ProbabilisticOutcomeModel, outcomeScore } from './probabilistic-outcome.js';
 export { PROFILES, type Profile } from './utility-profiles.js';
 export {
+  REPETITION_WINDOW,
   type UtilityBreakdown,
   type UtilityConfig,
   affinity,

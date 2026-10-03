@@ -23,7 +23,7 @@ import type {
 } from '../state/journal.js';
 import { relKey, type Id, type RelationshipEdge, type SimState } from '../state/types.js';
 import { promoteAcquaintance } from './acquaintance.js';
-import { dailyCount, habituationFactor, habituationKey, HABITUATION_RULE } from './habituation.js';
+import { dailyCount, habituationFactor, habituationKey, HABITUATION_RULE, lastKey } from './habituation.js';
 import { kitFor, type RuleCtx } from './kit.js';
 import { ruleFor } from './table.js';
 
@@ -166,6 +166,7 @@ export function resolveInteraction(state: SimState, input: ResolveInput, ids: Id
     effects.push(applyAndRecord(state, fx, link, ids));
   }
   state.dailyCounts[key] = count + 1;
+  if (option.targetId !== null) state.dailyCounts[lastKey(actorId, def.id, option.targetId)] = state.tick + 1;
 
   // Métadonnées d'arête : rencontre, compteurs, étiquettes.
   const touched = new Set<string>();

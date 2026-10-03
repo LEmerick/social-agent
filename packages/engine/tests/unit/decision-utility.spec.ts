@@ -170,7 +170,7 @@ describe('UtilityDecisionPolicy', () => {
     const state = palmiersAtSalon((s) => {
       s.dailyCounts[`${A}|small_talk|${S}`] = 3;
     });
-    expect(utilityBreakdown(state, A, opt('small_talk', S)).terms.habituation).toBeCloseTo(-1.2);
+    expect(utilityBreakdown(state, A, opt('small_talk', S)).terms.habituation).toBeCloseTo(-1.8);
   });
 });
 

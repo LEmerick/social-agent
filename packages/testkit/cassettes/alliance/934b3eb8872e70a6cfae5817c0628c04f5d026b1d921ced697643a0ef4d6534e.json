@@ -1,13 +1,13 @@
 {
   "model": "scripted-alliance",
-  "promptHash": "ee47a38e80bbbe9b49b689bbec8e69bf23d192ee044cf31157dbaca091f6bd66",
+  "promptHash": "934b3eb8872e70a6cfae5817c0628c04f5d026b1d921ced697643a0ef4d6534e",
   "purpose": "evaluate",
   "request": {
     "effort": "low",
     "maxTokens": 2000,
     "messages": [
       {
-        "content": "Choisis ce que ton personnage fait maintenant, parmi ces options (et seulement celles-ci) :\n1. small_talk → Alexandre\n2. compliment → Alexandre\n3. probe → Alexandre\n4. flirt → Alexandre\n5. provoke → Alexandre\n6. insult → Alexandre\n7. propose_alliance → Alexandre\n8. request_favor → Alexandre\n9. share_secret → Alexandre (fait : Sarah cache un secret : « a déjà participé à une autre émission »)\n10. share_secret → Alexandre (fait : Alexandre a proposé une alliance à Sarah)\n11. spread_rumor → Alexandre\n12. lie → Alexandre\n13. deflect → Alexandre\n14. confront → Alexandre\n15. confront → Alexandre (fait : Alexandre a proposé une alliance à Sarah)\n16. accuse → Alexandre\n17. accuse → Alexandre (fait : Alexandre a proposé une alliance à Sarah)\n18. threaten → Alexandre\n19. sabotage → Alexandre\n20. avoid → Alexandre\n21. rest\n0. none — ne rien faire\nRéponds : {\"choice\":\"<numéro ou none>\",\"distribution\":[{\"choice\":\"<numéro>\",\"p\":0.0}],\"reason\":\"<une phrase>\"}.\n`distribution` (facultative) donne tes probabilités par numéro ; `choice` est l’option retenue.",
+        "content": "Choisis ce que ton personnage fait maintenant, parmi ces options (et seulement celles-ci) :\n1. small_talk → Alexandre\n2. compliment → Alexandre\n3. probe → Alexandre\n4. flirt → Alexandre\n5. provoke → Alexandre\n6. insult → Alexandre\n7. propose_alliance → Alexandre\n8. request_favor → Alexandre\n9. share_secret → Alexandre (fait : Sarah cache un secret : « a déjà participé à une autre émission »)\n10. spread_rumor → Alexandre\n11. lie → Alexandre\n12. deflect → Alexandre\n13. confront → Alexandre\n14. confront → Alexandre (fait : Alexandre a proposé une alliance à Sarah)\n15. accuse → Alexandre\n16. accuse → Alexandre (fait : Alexandre a proposé une alliance à Sarah)\n17. threaten → Alexandre\n18. sabotage → Alexandre\n19. avoid → Alexandre\n20. rest\n0. none — ne rien faire\nRéponds : {\"choice\":\"<numéro ou none>\",\"distribution\":[{\"choice\":\"<numéro>\",\"p\":0.0}],\"reason\":\"<une phrase>\"}.\n`distribution` (facultative) donne tes probabilités par numéro ; `choice` est l’option retenue.",
         "role": "user"
       }
     ],
