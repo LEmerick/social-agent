@@ -23,6 +23,7 @@ import {
   type ZoneRecord,
   DomainError,
 } from '@ai-reality/engine';
+import type { LlmCallRecord } from '@ai-reality/engine/llm';
 
 /** Contenu complet du stockage en mémoire : copié au début de chaque transaction. */
 export interface Db {
@@ -52,6 +53,7 @@ export interface Db {
   characterStates: Map<string, CharacterStateRecord>;
   /** Clé : epochId. */
   snapshots: Map<string, RelationshipEdge[]>;
+  llmCalls: Map<string, LlmCallRecord>;
 }
 
 export const emptyDb = (): Db => ({
@@ -78,6 +80,7 @@ export const emptyDb = (): Db => ({
   scoreEntries: new Map(),
   characterStates: new Map(),
   snapshots: new Map(),
+  llmCalls: new Map(),
 });
 
 export const cloneDb = (db: Db): Db => structuredClone(db);

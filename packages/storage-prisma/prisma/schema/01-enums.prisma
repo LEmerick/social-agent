@@ -185,6 +185,10 @@ enum LlmPurpose {
   speak
   evaluate
   reflect
+  verify
+  compile_directive
+  interview
+  write
 
   @@map("llm_purpose")
 }

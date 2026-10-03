@@ -1,5 +1,6 @@
 import { type StoragePort, type StorageTx } from '@ai-reality/engine';
 import { type Db, cloneDb, emptyDb } from './db.js';
+import { llmRepos } from './repos-llm.js';
 import { refRepos } from './repos-ref.js';
 import { simRepos } from './repos-sim.js';
 
@@ -19,7 +20,7 @@ export function createMemoryStorage(): StoragePort & { reset(): void } {
     tx<T>(fn: (s: StorageTx) => Promise<T>): Promise<T> {
       const run = async (): Promise<T> => {
         const working = cloneDb(committed);
-        const result = await fn({ ...refRepos(working), ...simRepos(working) });
+        const result = await fn({ ...refRepos(working), ...simRepos(working), ...llmRepos(working) });
         committed = working;
         return result;
       };
