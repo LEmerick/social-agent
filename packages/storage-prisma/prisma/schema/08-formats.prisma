@@ -1,0 +1,171 @@
+// ───────────── Formats de jeu ─────────────
+
+model ItemDef {
+  id                String   @id @db.Uuid
+  seasonId          String   @map("season_id") @db.Uuid
+  slug              String
+  name              String
+  description       String?
+  kind              ItemKind
+  effects           Json     @default("{}")
+  transferable      Boolean  @default(true)
+  expiresAfterEpoch Int?     @map("expires_after_epoch")
+  visualRef         String?  @map("visual_ref")
+
+  season Season @relation(fields: [seasonId], references: [id])
+  items  Item[] @relation("ItemType")
+  fakes  Item[] @relation("FakeOf")
+
+  @@unique([seasonId, slug])
+  @@map("item_def")
+}
+
+model Item {
+  id                String    @id @db.Uuid
+  itemDefId         String    @map("item_def_id") @db.Uuid
+  holderCharacterId String?   @map("holder_character_id") @db.Uuid
+  locationId        String?   @map("location_id") @db.Uuid
+  hidden            Boolean   @default(false)
+  searchDifficulty  Int?      @map("search_difficulty") @db.SmallInt
+  isFake            Boolean   @default(false) @map("is_fake")
+  fakeOfItemDefId   String?   @map("fake_of_item_def_id") @db.Uuid
+  state             ItemState @default(active)
+
+  itemDef  ItemDef    @relation("ItemType", fields: [itemDefId], references: [id])
+  fakeOf   ItemDef?   @relation("FakeOf", fields: [fakeOfItemDefId], references: [id])
+  holder   Character? @relation("ItemHolder", fields: [holderCharacterId], references: [id])
+  location Location?  @relation(fields: [locationId], references: [id])
+
+  @@map("item")
+}
+
+model MissionDef {
+  id                  String         @id @db.Uuid
+  seasonId            String         @map("season_id") @db.Uuid
+  slug                String
+  title               String
+  briefing            String
+  scope               MissionScope
+  secrecy             MissionSecrecy
+  objective           Json
+  failure             Json?
+  reward              Json
+  penalty             Json?
+  deadlineEpochOffset Int?           @map("deadline_epoch_offset")
+
+  season      Season              @relation(fields: [seasonId], references: [id])
+  assignments MissionAssignment[]
+
+  @@unique([seasonId, slug])
+  @@map("mission_def")
+}
+
+model MissionAssignment {
+  id              String        @id @db.Uuid
+  missionDefId    String        @map("mission_def_id") @db.Uuid
+  characterId     String?       @map("character_id") @db.Uuid
+  teamId          String?       @map("team_id") @db.Uuid
+  assignedEventId String        @map("assigned_event_id") @db.Uuid
+  deadlineEpoch   Int?          @map("deadline_epoch")
+  status          MissionStatus @default(active)
+  progress        Json          @default("{}")
+  resolvedEventId String?       @map("resolved_event_id") @db.Uuid
+
+  missionDef    MissionDef @relation(fields: [missionDefId], references: [id])
+  character     Character? @relation(fields: [characterId], references: [id])
+  team          Team?      @relation(fields: [teamId], references: [id])
+  assignedEvent Event      @relation("AssignedEvent", fields: [assignedEventId], references: [id])
+  resolvedEvent Event?     @relation("ResolvedEvent", fields: [resolvedEventId], references: [id])
+
+  @@map("mission_assignment")
+}
+
+model Team {
+  id             String  @id @db.Uuid
+  seasonId       String  @map("season_id") @db.Uuid
+  slug           String
+  name           String
+  color          String?
+  campLocationId String? @map("camp_location_id") @db.Uuid
+  createdEpoch   Int     @map("created_epoch")
+  dissolvedEpoch Int?    @map("dissolved_epoch")
+
+  season       Season              @relation(fields: [seasonId], references: [id])
+  campLocation Location?           @relation(fields: [campLocationId], references: [id])
+  memberships  TeamMembership[]
+  missions     MissionAssignment[]
+
+  @@unique([seasonId, slug])
+  @@map("team")
+}
+
+model TeamMembership {
+  teamId        String  @map("team_id") @db.Uuid
+  characterId   String  @map("character_id") @db.Uuid
+  fromEpoch     Int     @map("from_epoch")
+  toEpoch       Int?    @map("to_epoch")
+  joinedEventId String? @map("joined_event_id") @db.Uuid
+
+  team        Team      @relation(fields: [teamId], references: [id])
+  character   Character @relation(fields: [characterId], references: [id])
+  joinedEvent Event?    @relation(fields: [joinedEventId], references: [id])
+
+  @@id([teamId, characterId, fromEpoch])
+  @@map("team_membership")
+}
+
+model VoteSession {
+  id         String   @id @db.Uuid
+  epochId    String   @map("epoch_id") @db.Uuid
+  tick       Int
+  sceneId    String?  @map("scene_id") @db.Uuid
+  kind       VoteKind
+  electorate Json
+  rules      Json
+  result     Json?
+  eventId    String?  @unique @map("event_id") @db.Uuid
+
+  epoch Epoch  @relation(fields: [epochId], references: [id])
+  scene Scene? @relation(fields: [sceneId], references: [id])
+  event Event? @relation(fields: [eventId], references: [id])
+  votes Vote[]
+
+  @@map("vote_session")
+}
+
+model Vote {
+  voteSessionId String  @map("vote_session_id") @db.Uuid
+  voterId       String  @map("voter_id") @db.Uuid
+  targetId      String  @map("target_id") @db.Uuid
+  decisionId    String? @map("decision_id") @db.Uuid
+  revealed      Boolean @default(false)
+
+  voteSession VoteSession @relation(fields: [voteSessionId], references: [id])
+  voter       Character   @relation("Voter", fields: [voterId], references: [id])
+  target      Character   @relation("VoteTarget", fields: [targetId], references: [id])
+
+  @@id([voteSessionId, voterId])
+  @@map("vote")
+}
+
+model ScheduledEvent {
+  id           String        @id @db.Uuid
+  seasonId     String        @map("season_id") @db.Uuid
+  kind         ScheduledKind
+  epoch        Int?
+  tickStart    Int?          @map("tick_start")
+  tickEnd      Int?          @map("tick_end")
+  trigger      Json?
+  locationId   String?       @map("location_id") @db.Uuid
+  participants Json
+  mandatory    Boolean       @default(true)
+  announced    Boolean       @default(true)
+  params       Json          @default("{}")
+  firedEventId String?       @unique @map("fired_event_id") @db.Uuid
+
+  season     Season    @relation(fields: [seasonId], references: [id])
+  location   Location? @relation(fields: [locationId], references: [id])
+  firedEvent Event?    @relation(fields: [firedEventId], references: [id])
+
+  @@map("scheduled_event")
+}

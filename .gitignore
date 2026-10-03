@@ -1,0 +1,22 @@
+# Build, dépendances et couverture
+node_modules/
+dist/
+coverage/
+.turbo/
+*.tsbuildinfo
+
+# Ruflo local secrets and runtime data
+.env
+.env.local
+.env.*.local
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+.claude/settings.local.json
+.claude/settings.json.bak-*
+.swarm/*.db
+.swarm/*.db-*
+ruvector.db
+
+# Logs et bases locales d'outils
+*.log

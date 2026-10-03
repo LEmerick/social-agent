@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: ai_reality
+          POSTGRES_PASSWORD: ai_reality_ci
+          POSTGRES_DB: ai_reality_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ai_reality -d ai_reality_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql://ai_reality:ai_reality_ci@localhost:5432/ai_reality_test
+      DATABASE_URL: postgresql://ai_reality:ai_reality_ci@localhost:5432/ai_reality_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Générer le client Prisma
+        run: pnpm -F @ai-reality/storage-prisma exec prisma generate --schema prisma/schema
+
+      - name: Appliquer les migrations sur la base de test
+        run: pnpm -F @ai-reality/storage-prisma exec prisma migrate deploy --schema prisma/schema
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Tests (unitaires, contrat de stockage)
+        run: pnpm test:unit
+
+      # Scénarios avec cassettes LLM : ajoutés à partir de M5.

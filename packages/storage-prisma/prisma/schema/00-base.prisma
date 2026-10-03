@@ -1,0 +1,15 @@
+// Source de vérité du modèle physique. Ce que Prisma ne sait pas exprimer
+// (EXCLUDE, CHECK, HNSW, REVOKE) est dans migrations/0002_constraints.
+// Voir docs/database-model.md et docs/database-prisma.md.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector, btree_gist]
+}
+

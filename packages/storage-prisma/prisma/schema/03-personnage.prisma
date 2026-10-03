@@ -1,0 +1,112 @@
+// ───────────── Personnage ─────────────
+
+model Character {
+  id                  String            @id @db.Uuid
+  worldId             String            @map("world_id") @db.Uuid
+  ownerUserId         String?           @map("owner_user_id") @db.Uuid
+  slug                String
+  firstName           String            @map("first_name")
+  lastName            String?           @map("last_name")
+  age                 Int?              @db.SmallInt
+  gender              String?
+  origin              String?
+  backstory           String?
+  physicalDescription String?           @map("physical_description")
+  speechStyle         String?           @map("speech_style")
+  autonomy            CharacterAutonomy
+  personaPrompt       String?           @map("persona_prompt")
+  personaVersion      Int               @default(1) @map("persona_version")
+  status              CharacterStatus   @default(active)
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  world                 World                    @relation(fields: [worldId], references: [id])
+  visuals               CharacterVisual[]
+  traits                CharacterTrait[]
+  goals                 CharacterGoal[]          @relation("GoalOwner")
+  goalTargets           CharacterGoal[]          @relation("GoalTarget")
+  directives            CharacterDirective[]
+  presences             Presence[]
+  relationshipsOut      Relationship[]           @relation("RelSource")
+  relationshipsIn       Relationship[]           @relation("RelTarget")
+  initiatedInteractions Interaction[]            @relation("Initiator")
+  participations        InteractionParticipant[]
+  utterances            Utterance[]              @relation("Speaker")
+  decisions             Decision[]
+  eventParticipations   EventParticipant[]
+  effectsSubject        Effect[]                 @relation("EffectSubject")
+  effectsOther          Effect[]                 @relation("EffectOther")
+  knowledge             Knowledge[]              @relation("KnowledgeOwner")
+  toldKnowledge         Knowledge[]              @relation("ToldBy")
+  factsSubject          Fact[]                   @relation("FactSubject")
+  factsObject           Fact[]                   @relation("FactObject")
+  factsInvented         Fact[]                   @relation("FactInventor")
+  memories              Memory[]
+  states                CharacterState[]
+  creditEntries         CreditLedger[]
+  heldItems             Item[]                   @relation("ItemHolder")
+  missionAssignments    MissionAssignment[]
+  teamMemberships       TeamMembership[]
+  votesCast             Vote[]                   @relation("Voter")
+  votesReceived         Vote[]                   @relation("VoteTarget")
+
+  @@unique([worldId, slug])
+  @@map("character")
+}
+
+model CharacterVisual {
+  characterId       String   @map("character_id") @db.Uuid
+  version           Int
+  referenceImages   String[] @map("reference_images")
+  voiceId           String?  @map("voice_id")
+  wardrobeId        String?  @map("wardrobe_id")
+  visualDescription String?  @map("visual_description")
+  validFromEpoch    Int      @map("valid_from_epoch")
+
+  character Character @relation(fields: [characterId], references: [id])
+
+  @@id([characterId, version])
+  @@map("character_visual")
+}
+
+model CharacterTrait {
+  characterId String @map("character_id") @db.Uuid
+  trait       String
+  value       Int    @db.SmallInt
+
+  character Character @relation(fields: [characterId], references: [id])
+
+  @@id([characterId, trait])
+  @@map("character_trait")
+}
+
+model CharacterGoal {
+  id                String     @id @db.Uuid
+  characterId       String     @map("character_id") @db.Uuid
+  kind              GoalKind
+  description       String
+  origin            GoalOrigin
+  targetCharacterId String?    @map("target_character_id") @db.Uuid
+  status            String     @default("open")
+  createdEpoch      Int?       @map("created_epoch")
+  closedEpoch       Int?       @map("closed_epoch")
+
+  character Character  @relation("GoalOwner", fields: [characterId], references: [id])
+  target    Character? @relation("GoalTarget", fields: [targetCharacterId], references: [id])
+
+  @@map("character_goal")
+}
+
+model CharacterDirective {
+  id          String   @id @db.Uuid
+  characterId String   @map("character_id") @db.Uuid
+  text        String
+  fromEpoch   Int      @map("from_epoch")
+  toEpoch     Int?     @map("to_epoch")
+  biases      Json?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  character Character @relation(fields: [characterId], references: [id])
+
+  @@map("character_directive")
+}
+

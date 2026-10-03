@@ -1,0 +1,34 @@
+{
+  "name": "@ai-reality/storage-prisma",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Adaptateur StoragePort sur PostgreSQL via Prisma, avec schéma et migrations",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "prisma"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "prisma:validate": "prisma validate",
+    "prisma:generate": "prisma generate"
+  },
+  "dependencies": {
+    "@ai-reality/engine": "workspace:*",
+    "@prisma/client": "^6"
+  },
+  "devDependencies": {
+    "@ai-reality/testkit": "workspace:*",
+    "prisma": "^6",
+    "vitest": "^5.0.3"
+  }
+}

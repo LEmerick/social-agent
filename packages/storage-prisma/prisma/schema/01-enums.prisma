@@ -1,0 +1,257 @@
+// ───────────── Enums ─────────────
+
+enum EpochStatus {
+  pending
+  running
+  completed
+  failed
+
+  @@map("epoch_status")
+}
+
+enum SceneKind {
+  free
+  activity
+  meal
+  ceremony
+  confessional
+
+  @@map("scene_kind")
+}
+
+enum PresenceKind {
+  scene
+  transit
+  offstage
+
+  @@map("presence_kind")
+}
+
+enum CharacterAutonomy {
+  autonomous
+  guided
+  directive
+
+  @@map("character_autonomy")
+}
+
+enum CharacterStatus {
+  active
+  restricted
+  elimination_pending
+  eliminated
+  paused
+
+  @@map("character_status")
+}
+
+enum GoalKind {
+  main
+  secondary
+  social
+  private
+
+  @@map("goal_kind")
+}
+
+enum GoalOrigin {
+  player
+  ai
+  season
+
+  @@map("goal_origin")
+}
+
+enum InteractionType {
+  social
+  relational
+  strategic
+  competitive
+  informational
+  collective
+
+  @@map("interaction_type")
+}
+
+enum InteractionMode {
+  dialogue
+  summarized
+
+  @@map("interaction_mode")
+}
+
+enum ParticipantRole {
+  speaker
+  addressee
+  bystander
+  eavesdropper
+
+  @@map("participant_role")
+}
+
+enum Volume {
+  whisper
+  normal
+  loud
+
+  @@map("volume")
+}
+
+enum EventParticipantRole {
+  actor
+  target
+  witness
+  subject
+
+  @@map("event_participant_role")
+}
+
+enum EffectTarget {
+  stat
+  mood
+  relationship
+  score
+  credit
+  goal
+  item
+  mission
+  team
+
+  @@map("effect_target")
+}
+
+enum Acquaintance {
+  known_of
+  met
+  acquainted
+  close
+
+  @@map("acquaintance")
+}
+
+enum KnowledgeSource {
+  seeded
+  public
+  witnessed
+  overheard
+  told
+  inferred
+
+  @@map("knowledge_source")
+}
+
+enum Belief {
+  believes
+  doubts
+  disbelieves
+
+  @@map("belief")
+}
+
+enum CreditSource {
+  purchased
+  earned
+  system
+
+  @@map("credit_source")
+}
+
+enum ScoreName {
+  social
+  drama
+  popularity
+  survival
+  influence
+
+  @@map("score_name")
+}
+
+enum MemoryKind {
+  episodic
+  reflection
+
+  @@map("memory_kind")
+}
+
+enum DecisionKind {
+  action
+  outcome
+
+  @@map("decision_kind")
+}
+
+enum LlmPurpose {
+  plan
+  speak
+  evaluate
+  reflect
+
+  @@map("llm_purpose")
+}
+
+enum ItemKind {
+  power
+  resource
+  clue
+  cosmetic
+
+  @@map("item_kind")
+}
+
+enum ItemState {
+  active
+  used
+  expired
+  destroyed
+
+  @@map("item_state")
+}
+
+enum MissionScope {
+  individual
+  team
+  all
+
+  @@map("mission_scope")
+}
+
+enum MissionSecrecy {
+  public
+  private
+  secret
+
+  @@map("mission_secrecy")
+}
+
+enum MissionStatus {
+  active
+  succeeded
+  failed
+  expired
+  abandoned
+
+  @@map("mission_status")
+}
+
+enum VoteKind {
+  elimination
+  designation
+  public
+
+  @@map("vote_kind")
+}
+
+enum ScheduledKind {
+  challenge
+  council
+  meal
+  announcement
+  item_drop
+  mission_assign
+  team_shuffle
+  merge
+  final
+
+  @@map("scheduled_kind")
+}
+

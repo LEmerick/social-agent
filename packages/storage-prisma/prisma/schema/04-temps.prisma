@@ -1,0 +1,76 @@
+// ───────────── Temps et présence ─────────────
+
+model Epoch {
+  id                String      @id @db.Uuid
+  worldId           String      @map("world_id") @db.Uuid
+  seasonId          String      @map("season_id") @db.Uuid
+  number            Int
+  status            EpochStatus @default(pending)
+  rngSeed           String      @map("rng_seed")
+  rulesVersion      Int         @map("rules_version")
+  lastCommittedTick Int         @default(-1) @map("last_committed_tick")
+  startedAt         DateTime?   @map("started_at") @db.Timestamptz(6)
+  completedAt       DateTime?   @map("completed_at") @db.Timestamptz(6)
+
+  world             World                  @relation(fields: [worldId], references: [id])
+  season            Season                 @relation(fields: [seasonId], references: [id])
+  scenes            Scene[]
+  presences         Presence[]
+  events            Event[]
+  decisions         Decision[]
+  voteSessions      VoteSession[]
+  characterStates   CharacterState[]
+  creditEntries     CreditLedger[]
+  relationshipSnaps RelationshipSnapshot[]
+
+  @@unique([worldId, number])
+  @@map("epoch")
+}
+
+model Scene {
+  id         String    @id @db.Uuid
+  epochId    String    @map("epoch_id") @db.Uuid
+  locationId String    @map("location_id") @db.Uuid
+  zoneId     String?   @map("zone_id") @db.Uuid
+  kind       SceneKind @default(free)
+  tickStart  Int       @map("tick_start")
+  tickEnd    Int?      @map("tick_end")
+  title      String?
+  importance Float?    @db.Real
+
+  epoch        Epoch         @relation(fields: [epochId], references: [id])
+  location     Location      @relation(fields: [locationId], references: [id])
+  zone         LocationZone? @relation(fields: [zoneId], references: [id])
+  presences    Presence[]
+  interactions Interaction[]
+  events       Event[]
+  voteSessions VoteSession[]
+
+  @@index([epochId, locationId, tickStart])
+  @@map("scene")
+}
+
+model Presence {
+  id             String       @id @db.Uuid
+  epochId        String       @map("epoch_id") @db.Uuid
+  characterId    String       @map("character_id") @db.Uuid
+  tickStart      Int          @map("tick_start")
+  tickEnd        Int?         @map("tick_end")
+  kind           PresenceKind
+  sceneId        String?      @map("scene_id") @db.Uuid
+  fromLocationId String?      @map("from_location_id") @db.Uuid
+  toLocationId   String?      @map("to_location_id") @db.Uuid
+  offstageReason String?      @map("offstage_reason")
+  role           String?
+
+  epoch        Epoch     @relation(fields: [epochId], references: [id])
+  character    Character @relation(fields: [characterId], references: [id])
+  scene        Scene?    @relation(fields: [sceneId], references: [id])
+  fromLocation Location? @relation("PresenceFrom", fields: [fromLocationId], references: [id])
+  toLocation   Location? @relation("PresenceTo", fields: [toLocationId], references: [id])
+
+  @@index([sceneId])
+  @@index([epochId, characterId])
+  @@map("presence")
+}
+

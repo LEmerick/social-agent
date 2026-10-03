@@ -1,0 +1,178 @@
+// ───────────── Ce qui se passe ─────────────
+
+model Interaction {
+  id             String          @id @db.Uuid
+  sceneId        String          @map("scene_id") @db.Uuid
+  type           InteractionType
+  initiatorId    String?         @map("initiator_id") @db.Uuid
+  tickStart      Int             @map("tick_start")
+  tickEnd        Int?            @map("tick_end")
+  action         String
+  outcome        String?
+  mode           InteractionMode @default(dialogue)
+  classification Json?
+
+  scene        Scene                    @relation(fields: [sceneId], references: [id])
+  initiator    Character?               @relation("Initiator", fields: [initiatorId], references: [id])
+  event        Event?
+  participants InteractionParticipant[]
+  utterances   Utterance[]
+  decisions    Decision[]
+
+  @@map("interaction")
+}
+
+model InteractionParticipant {
+  interactionId    String          @map("interaction_id") @db.Uuid
+  characterId      String          @map("character_id") @db.Uuid
+  role             ParticipantRole
+  perceivedOutcome String?         @map("perceived_outcome")
+  emotionAfter     String?         @map("emotion_after")
+
+  interaction Interaction @relation(fields: [interactionId], references: [id])
+  character   Character   @relation(fields: [characterId], references: [id])
+
+  @@id([interactionId, characterId])
+  @@map("interaction_participant")
+}
+
+model Utterance {
+  id              String   @id @db.Uuid
+  interactionId   String   @map("interaction_id") @db.Uuid
+  seq             Int      @db.SmallInt
+  tick            Int
+  speakerId       String   @map("speaker_id") @db.Uuid
+  addresseeIds    String[] @default([]) @map("addressee_ids") @db.Uuid
+  text            String
+  intent          String?
+  tone            String?
+  emotion         String?
+  volume          Volume   @default(normal)
+  revealedFactIds String[] @default([]) @map("revealed_fact_ids") @db.Uuid
+  llmCallId       String?  @map("llm_call_id") @db.Uuid
+
+  interaction Interaction @relation(fields: [interactionId], references: [id])
+  speaker     Character   @relation("Speaker", fields: [speakerId], references: [id])
+
+  @@unique([interactionId, seq])
+  @@map("utterance")
+}
+
+model Decision {
+  id            String       @id @db.Uuid
+  epochId       String       @map("epoch_id") @db.Uuid
+  tick          Int
+  characterId   String       @map("character_id") @db.Uuid
+  kind          DecisionKind
+  options       Json
+  chosen        Json
+  policy        String
+  rngDraw       Float?       @map("rng_draw")
+  interactionId String?      @map("interaction_id") @db.Uuid
+  llmCallId     String?      @map("llm_call_id") @db.Uuid
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  epoch       Epoch        @relation(fields: [epochId], references: [id])
+  character   Character    @relation(fields: [characterId], references: [id])
+  interaction Interaction? @relation(fields: [interactionId], references: [id])
+
+  @@index([epochId, characterId, tick])
+  @@map("decision")
+}
+
+model Event {
+  id              String   @id @db.Uuid
+  worldId         String   @map("world_id") @db.Uuid
+  epochId         String   @map("epoch_id") @db.Uuid
+  tick            Int
+  seq             BigInt   @unique @default(autoincrement())
+  type            String
+  sceneId         String?  @map("scene_id") @db.Uuid
+  interactionId   String?  @unique @map("interaction_id") @db.Uuid
+  locationId      String?  @map("location_id") @db.Uuid
+  payload         Json
+  importance      Float    @default(0) @db.Real
+  causedByEventId String?  @map("caused_by_event_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  epoch                Epoch               @relation(fields: [epochId], references: [id])
+  scene                Scene?              @relation(fields: [sceneId], references: [id])
+  interaction          Interaction?        @relation(fields: [interactionId], references: [id])
+  location             Location?           @relation(fields: [locationId], references: [id])
+  causedBy             Event?              @relation("Causes", fields: [causedByEventId], references: [id])
+  causes               Event[]             @relation("Causes")
+  participants         EventParticipant[]
+  effects              Effect[]
+  originFacts          Fact[]              @relation("FactOrigin")
+  knowledge            Knowledge[]         @relation("ViaEvent")
+  memories             Memory[]
+  creditEntries        CreditLedger[]
+  scores               ScoreEntry[]
+  firstMetLinks        Relationship[]      @relation("FirstMet")
+  lastInteractionLinks Relationship[]      @relation("LastInteraction")
+  assignedMissions     MissionAssignment[] @relation("AssignedEvent")
+  resolvedMissions     MissionAssignment[] @relation("ResolvedEvent")
+  voteSession          VoteSession?
+  scheduledEvent       ScheduledEvent?
+  teamJoins            TeamMembership[]
+
+  @@index([epochId, tick])
+  @@index([epochId, importance(sort: Desc)])
+  @@map("event")
+}
+
+model EventParticipant {
+  eventId     String               @map("event_id") @db.Uuid
+  characterId String               @map("character_id") @db.Uuid
+  role        EventParticipantRole
+
+  event     Event     @relation(fields: [eventId], references: [id])
+  character Character @relation(fields: [characterId], references: [id])
+
+  @@id([eventId, characterId, role])
+  @@map("event_participant")
+}
+
+model Effect {
+  id               String       @id @db.Uuid
+  eventId          String       @map("event_id") @db.Uuid
+  epochId          String       @map("epoch_id") @db.Uuid
+  tick             Int
+  targetKind       EffectTarget @map("target_kind")
+  characterId      String       @map("character_id") @db.Uuid
+  otherCharacterId String?      @map("other_character_id") @db.Uuid
+  dimension        String
+  delta            Int          @db.SmallInt
+  valueAfter       Int?         @map("value_after") @db.SmallInt
+  ruleId           String       @map("rule_id")
+  ruleVersion      Int          @map("rule_version")
+  reason           String?
+
+  event     Event      @relation(fields: [eventId], references: [id])
+  character Character  @relation("EffectSubject", fields: [characterId], references: [id])
+  other     Character? @relation("EffectOther", fields: [otherCharacterId], references: [id])
+
+  @@index([characterId, epochId])
+  @@index([characterId, otherCharacterId])
+  @@map("effect")
+}
+
+model LlmCall {
+  id           String     @id @db.Uuid
+  epochId      String?    @map("epoch_id") @db.Uuid
+  characterId  String?    @map("character_id") @db.Uuid
+  purpose      LlmPurpose
+  model        String
+  promptHash   String     @map("prompt_hash")
+  request      Json
+  response     Json
+  inputTokens  Int?       @map("input_tokens")
+  outputTokens Int?       @map("output_tokens")
+  cachedTokens Int?       @map("cached_tokens")
+  latencyMs    Int?       @map("latency_ms")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([promptHash])
+  @@map("llm_call")
+}
+

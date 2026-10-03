@@ -1,0 +1,69 @@
+// ───────────── Connaissances et mémoire ─────────────
+
+model Fact {
+  id            String  @id @db.Uuid
+  worldId       String  @map("world_id") @db.Uuid
+  subjectId     String? @map("subject_id") @db.Uuid
+  predicate     String
+  objectId      String? @map("object_id") @db.Uuid
+  objectText    String? @map("object_text")
+  isTrue        Boolean @map("is_true")
+  sensitivity   Int     @default(0) @db.SmallInt
+  originEventId String? @map("origin_event_id") @db.Uuid
+  inventedById  String? @map("invented_by_id") @db.Uuid
+
+  subject     Character?  @relation("FactSubject", fields: [subjectId], references: [id])
+  object      Character?  @relation("FactObject", fields: [objectId], references: [id])
+  inventedBy  Character?  @relation("FactInventor", fields: [inventedById], references: [id])
+  originEvent Event?      @relation("FactOrigin", fields: [originEventId], references: [id])
+  knowledge   Knowledge[]
+
+  @@map("fact")
+}
+
+model Knowledge {
+  id                String          @id @db.Uuid
+  characterId       String          @map("character_id") @db.Uuid
+  factId            String          @map("fact_id") @db.Uuid
+  sourceType        KnowledgeSource @map("source_type")
+  toldById          String?         @map("told_by_id") @db.Uuid
+  viaEventId        String?         @map("via_event_id") @db.Uuid
+  parentKnowledgeId String?         @map("parent_knowledge_id") @db.Uuid
+  learnedEpoch      Int             @map("learned_epoch")
+  learnedTick       Int             @map("learned_tick")
+  confidence        Float           @db.Real
+  belief            Belief          @default(believes)
+
+  character Character   @relation("KnowledgeOwner", fields: [characterId], references: [id])
+  fact      Fact        @relation(fields: [factId], references: [id])
+  toldBy    Character?  @relation("ToldBy", fields: [toldById], references: [id])
+  viaEvent  Event?      @relation("ViaEvent", fields: [viaEventId], references: [id])
+  parent    Knowledge?  @relation("KnowledgeChain", fields: [parentKnowledgeId], references: [id])
+  children  Knowledge[] @relation("KnowledgeChain")
+
+  @@unique([characterId, factId, viaEventId])
+  @@index([characterId])
+  @@index([factId])
+  @@map("knowledge")
+}
+
+model Memory {
+  id                String                       @id @db.Uuid
+  characterId       String                       @map("character_id") @db.Uuid
+  eventId           String?                      @map("event_id") @db.Uuid
+  epochId           String                       @map("epoch_id") @db.Uuid
+  kind              MemoryKind                   @default(episodic)
+  summary           String
+  emotion           String?
+  salience          Float                        @db.Real
+  aboutCharacterIds String[]                     @default([]) @map("about_character_ids") @db.Uuid
+  embedding         Unsupported("vector(1024)")?
+  lastRecalledEpoch Int?                         @map("last_recalled_epoch")
+
+  character Character @relation(fields: [characterId], references: [id])
+  event     Event?    @relation(fields: [eventId], references: [id])
+
+  @@index([characterId, salience(sort: Desc)])
+  @@map("memory")
+}
+

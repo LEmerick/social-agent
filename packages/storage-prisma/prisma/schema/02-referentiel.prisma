@@ -1,0 +1,86 @@
+// ───────────── Référentiel ─────────────
+
+model World {
+  id        String   @id @db.Uuid
+  name      String
+  seed      String
+  config    Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  seasons    Season[]
+  epochs     Epoch[]
+  locations  Location[]
+  characters Character[]
+
+  @@map("world")
+}
+
+model Season {
+  id           String @id @db.Uuid
+  worldId      String @map("world_id") @db.Uuid
+  number       Int
+  rules        Json
+  rulesVersion Int    @default(1) @map("rules_version")
+  format       Json   @default("{}")
+
+  world           World            @relation(fields: [worldId], references: [id])
+  epochs          Epoch[]
+  itemDefs        ItemDef[]
+  missionDefs     MissionDef[]
+  teams           Team[]
+  scheduledEvents ScheduledEvent[]
+
+  @@unique([worldId, number])
+  @@map("season")
+}
+
+model Location {
+  id        String  @id @db.Uuid
+  worldId   String  @map("world_id") @db.Uuid
+  slug      String
+  name      String
+  kind      String
+  capacity  Int?
+  isPrivate Boolean @default(false) @map("is_private")
+  visualRef String? @map("visual_ref")
+
+  world           World            @relation(fields: [worldId], references: [id])
+  zones           LocationZone[]
+  routesFrom      LocationRoute[]  @relation("RouteFrom")
+  routesTo        LocationRoute[]  @relation("RouteTo")
+  scenes          Scene[]
+  presencesFrom   Presence[]       @relation("PresenceFrom")
+  presencesTo     Presence[]       @relation("PresenceTo")
+  events          Event[]
+  items           Item[]
+  campOf          Team[]
+  scheduledEvents ScheduledEvent[]
+
+  @@unique([worldId, slug])
+  @@map("location")
+}
+
+model LocationZone {
+  id           String @id @db.Uuid
+  locationId   String @map("location_id") @db.Uuid
+  slug         String
+  hearingRange String @default("zone") @map("hearing_range")
+
+  location Location @relation(fields: [locationId], references: [id])
+  scenes   Scene[]
+
+  @@map("location_zone")
+}
+
+model LocationRoute {
+  fromLocationId String @map("from_location_id") @db.Uuid
+  toLocationId   String @map("to_location_id") @db.Uuid
+  travelTicks    Int    @default(1) @map("travel_ticks") @db.SmallInt
+
+  from Location @relation("RouteFrom", fields: [fromLocationId], references: [id])
+  to   Location @relation("RouteTo", fields: [toLocationId], references: [id])
+
+  @@id([fromLocationId, toLocationId])
+  @@map("location_route")
+}
+

@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "installedAt": "2026-10-03T10:43:16.115Z",
+  "files": {
+    "/Users/rick-m/Documents/project/social_agent/.claude/settings.json": {
+      "plugins": [
+        "ruflo-mods@ruflo",
+        "ruflo-swarm@ruflo",
+        "ruflo-console@ruflo"
+      ],
+      "marketplace": true,
+      "env": true,
+      "claudeInstalled": [
+        "ruflo-mods@ruflo",
+        "ruflo-swarm@ruflo",
+        "ruflo-console@ruflo"
+      ]
+    }
+  }
+}
