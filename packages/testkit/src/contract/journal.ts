@@ -125,6 +125,37 @@ export function journalContract(h: HarnessRef): void {
       expect(edges.filter((r) => r.sourceId === C.alexandre && r.targetId === C.sarah)).toEqual(next.relationships);
     });
 
+    it('reweighScoreEntries remplace les poids sans toucher aux impacts ; updateScores fusionne les scores', async () => {
+      await withEpoch(h);
+      const batch = tick3Batch();
+      await h().storage.tx((s) => s.journal.commitTick(batch));
+      const weights = { social: 2, drama: 3, popularity: 4, survival: 5, influence: 6 };
+
+      await h().storage.tx((s) => s.journal.reweighScoreEntries(EPOCH_0.id, weights));
+      const journal = await h().storage.tx((s) => s.journal.read(EPOCH_0.id));
+      expect(batch.scoreEntries.length).toBeGreaterThan(0);
+      expect(journal.scoreEntries).toEqual(batch.scoreEntries.map((e) => ({ ...e, weight: weights[e.score] })));
+
+      const state = batch.characterStates[0];
+      if (!state) throw new Error('lot incomplet');
+      await h().storage.tx((s) =>
+        s.characterStates.updateScores(EPOCH_0.id, { [state.characterId]: { social: 12.5 } }),
+      );
+      const rows = await h().storage.tx((s) => s.characterStates.listByEpoch(EPOCH_0.id));
+      expect(rows.find((r) => r.characterId === state.characterId)?.scores).toEqual({ ...state.scores, social: 12.5 });
+      expect(rows.filter((r) => r.characterId !== state.characterId)).toEqual(
+        batch.characterStates.filter((r) => r.characterId !== state.characterId),
+      );
+      await expectCode(
+        h().storage.tx((s) => s.journal.reweighScoreEntries(fixedId(0, 79), weights)),
+        'NOT_FOUND',
+      );
+      await expectCode(
+        h().storage.tx((s) => s.characterStates.updateScores(fixedId(0, 79), { [state.characterId]: { social: 1 } })),
+        'NOT_FOUND',
+      );
+    });
+
     it('un lot vide avance seulement lastCommittedTick', async () => {
       await withEpoch(h);
       await h().storage.tx((s) => s.journal.commitTick(emptyTickBatch(EPOCH_0.id, 0)));

@@ -11,7 +11,7 @@
 import { DomainError } from '../core/errors.js';
 import { simIdFactory } from '../core/sim-ids.js';
 import type { DecisionPolicy, DestinationChoice, OutcomeModel } from '../decision/ports.js';
-import type { StoragePort } from '../ports/storage.js';
+import type { CharacterStatus, StoragePort } from '../ports/storage.js';
 import { type CharacterStateRecord, type SceneRecord, emptyTickBatch } from '../state/journal.js';
 import { type TransitZones, loadSimStateWithRuntime, runtimeOf } from '../state/load-runtime.js';
 import type { Id, SimState } from '../state/types.js';
@@ -255,7 +255,17 @@ function publish(scope: RunScope, batch: MutableTickBatch, openBefore: ReadonlyM
     const scene = openBefore.get(closed.id);
     if (scene) bus.emit('scene.closed', { scene: { ...scene, tickEnd: closed.tickEnd } });
   }
-  for (const event of batch.events) bus.emit('event', { event });
+  for (const event of batch.events) {
+    bus.emit('event', { event });
+    if (event.type === 'status_changed') {
+      const { characterId, from, to } = event.payload as {
+        characterId: Id;
+        from: CharacterStatus;
+        to: CharacterStatus;
+      };
+      bus.emit('character.status', { characterId, from, to });
+    }
+  }
   for (const utterance of batch.utterances) bus.emit('utterance', { utterance });
   for (const effect of batch.effects) bus.emit('effect.applied', { effect });
 }

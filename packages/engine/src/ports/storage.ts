@@ -29,6 +29,7 @@ import type {
   KnowledgeEdge,
   RelationshipEdge,
   RouteEdge,
+  ScoreName,
   ZoneNode,
 } from '../state/types.js';
 
@@ -216,6 +217,11 @@ export interface JournalRepository {
   read(epochId: string): Promise<EpochJournal>;
   /** Tous les events du monde, triés par `seq` (rejeu). */
   eventsOfWorld(worldId: string): Promise<EventRecord[]>;
+  /**
+   * Remplace le poids de chaque entrée de score de l'époque par `weights[entry.score]` (changement de pondération
+   * de la saison). Les `impact` ne changent jamais. Époque inconnue ⇒ `NOT_FOUND`.
+   */
+  reweighScoreEntries(epochId: string, weights: Readonly<Record<ScoreName, number>>): Promise<void>;
 }
 
 export interface CharacterStateRepository {
@@ -223,6 +229,11 @@ export interface CharacterStateRepository {
   latest(worldId: string): Promise<CharacterStateRecord[]>;
   /** Lignes d'une époque, triées par `characterId`. */
   listByEpoch(epochId: string): Promise<CharacterStateRecord[]>;
+  /**
+   * Fusionne `scores[characterId]` dans les scores de la ligne `(personnage, époque)` ; les personnages absents de
+   * `scores` ne changent pas. Ligne inconnue ⇒ `NOT_FOUND`.
+   */
+  updateScores(epochId: string, scores: Readonly<Record<string, Readonly<Record<string, number>>>>): Promise<void>;
 }
 
 export interface SnapshotRepository {

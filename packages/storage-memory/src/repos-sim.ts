@@ -116,6 +116,13 @@ export function simRepos(db: Db): SimRepos {
             .sort((a, b) => a.seq - b.seq)
             .map(copy),
         ),
+      reweighScoreEntries: (epochId, weights) =>
+        later(() => {
+          require_(db.epochs.has(epochId), `Époque ${epochId}`);
+          for (const [id, entry] of db.scoreEntries) {
+            if (entry.epochId === epochId) db.scoreEntries.set(id, { ...entry, weight: weights[entry.score] });
+          }
+        }),
     },
 
     characterStates: {
@@ -138,6 +145,15 @@ export function simRepos(db: Db): SimRepos {
             .sort((a, b) => cmp(a.characterId, b.characterId))
             .map(copy),
         ),
+      updateScores: (epochId, scores) =>
+        later(() => {
+          for (const [characterId, values] of Object.entries(scores)) {
+            const key = `${characterId}|${epochId}`;
+            const row = db.characterStates.get(key);
+            if (!row) throw notFound(`État du personnage ${characterId} à l'époque ${epochId}`);
+            db.characterStates.set(key, { ...row, scores: { ...row.scores, ...values } });
+          }
+        }),
     },
 
     snapshots: {

@@ -1,5 +1,5 @@
-import type { KnowledgeEdge, StorageTx } from '@ai-reality/engine';
-import { type Db, cmp, guard } from './support.js';
+import { DomainError, type KnowledgeEdge, type ScoreName, type StorageTx } from '@ai-reality/engine';
+import { type Db, asNumberRecord, cmp, guard } from './support.js';
 import { commitTick, readJournal } from './journal.js';
 import {
   relationshipData,
@@ -131,6 +131,17 @@ export function simRepos(db: Db): SimRepos {
         });
         return rows.map(toEventRecord);
       },
+      async reweighScoreEntries(epochId, weights) {
+        if (!(await db.epoch.findUnique({ where: { id: epochId }, select: { id: true } }))) {
+          throw new DomainError('NOT_FOUND', `Époque ${epochId} introuvable`);
+        }
+        for (const [score, weight] of Object.entries(weights)) {
+          await db.scoreEntry.updateMany({
+            where: { epochId, score: score as ScoreName },
+            data: { weight },
+          });
+        }
+      },
     },
 
     characterStates: {
@@ -152,6 +163,20 @@ export function simRepos(db: Db): SimRepos {
       async listByEpoch(epochId) {
         const rows = await db.characterState.findMany({ where: { epochId } });
         return rows.map(toStateRecord).sort((a, b) => cmp(a.characterId, b.characterId));
+      },
+      async updateScores(epochId, scores) {
+        for (const [characterId, values] of Object.entries(scores)) {
+          const row = await db.characterState.findUnique({
+            where: { characterId_epochId: { characterId, epochId } },
+          });
+          if (!row)
+            throw new DomainError('NOT_FOUND', `État du personnage ${characterId} à l'époque ${epochId} introuvable`);
+          const merged = { ...asNumberRecord(row.scores), ...values };
+          await db.characterState.update({
+            where: { characterId_epochId: { characterId, epochId } },
+            data: { scores: merged },
+          });
+        }
       },
     },
 
