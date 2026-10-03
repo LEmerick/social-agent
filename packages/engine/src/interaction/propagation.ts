@@ -126,10 +126,20 @@ export function screenReveals(
   return { utterances: screened, reveals, ignored };
 }
 
-/** Fait dont l'event d'origine précède l'interaction : c'est lui qui la cause (`caused_by_event_id`). */
-export function causeOf(ctx: Pick<TickContext, 'state'>, option: ActionOption, screened: ScreenedReveals): Id | null {
+/**
+ * Event qui cause l'interaction (`caused_by_event_id`) : celui par lequel l'émetteur a appris le fait porté
+ * (`via_event_id` de sa meilleure connaissance), à défaut l'event d'origine du fait. Les transmissions forment une chaîne.
+ */
+export function causeOf(
+  ctx: Pick<TickContext, 'state'>,
+  actorId: Id,
+  option: ActionOption,
+  screened: ScreenedReveals,
+): Id | null {
   const factId = option.factId ?? screened.reveals[0]?.factIds[0] ?? null;
-  return factId === null ? null : (ctx.state.facts[factId]?.originEventId ?? null);
+  if (factId === null) return null;
+  const speakerId = option.factId !== null ? actorId : (screened.reveals[0]?.speakerId ?? actorId);
+  return bestEdge(ctx.state, speakerId, factId)?.viaEventId ?? ctx.state.facts[factId]?.originEventId ?? null;
 }
 
 export interface PropagationArgs {

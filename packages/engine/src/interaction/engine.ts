@@ -153,7 +153,7 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
             locationId: view.scene.locationId,
             witnessIds,
             ctx: eavesdropping ? sceneOf(view.members) : scene,
-            causedByEventId: causeOf(ctx, option, screened),
+            causedByEventId: causeOf(ctx, actorId, option, screened),
             extraEffects: confrontation?.effects ?? [],
             ...(confrontation ? { payload: confrontation.payload } : {}),
             extraParticipants: subjectsOf(state, actorId, option, screened),

@@ -163,18 +163,21 @@ export function chainScenarioSuite(name: string, factory: () => Promise<EpochHar
       }
     }, 60_000);
 
-    it('les events s’enchaînent par caused_by depuis l’event d’origine du fait', async () => {
+    it('les events forment la chaîne E1 ← E2 ← E3 ← E4 par caused_by (l’event par lequel l’émetteur a appris le fait)', async () => {
       const { r, h } = await run();
       try {
         const byType = (type: string) => r.journal.events.filter((e) => e.type === type);
-        const origin = byType('alliance_formed')[0];
-        const shared = byType('secret_shared');
-        const confrontation = byType('confrontation')[0];
-        expect(shared).toHaveLength(2);
-        expect(origin?.causedByEventId).toBeNull();
-        for (const e of [...shared, confrontation]) expect(e?.causedByEventId).toBe(origin?.id);
+        const [e1] = byType('alliance_formed');
+        const [e2, e3] = byType('secret_shared');
+        const [e4] = byType('confrontation');
+        expect(byType('secret_shared')).toHaveLength(2);
+        expect(e1?.causedByEventId).toBeNull();
+        expect(e2?.causedByEventId).toBe(e1?.id);
+        expect(e3?.causedByEventId).toBe(e2?.id);
+        expect(e4?.causedByEventId).toBe(e3?.id);
+        expect(r.state.facts[r.factId]?.originEventId).toBe(e1?.id);
         // Le sujet du fait figure dans l'event quand il n'en est ni l'acteur ni la cible.
-        expect(shared[0]?.participants).toContainEqual({ characterId: alexandre, role: 'subject' });
+        expect(e2?.participants).toContainEqual({ characterId: alexandre, role: 'subject' });
       } finally {
         await h.close();
       }
