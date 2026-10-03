@@ -1,0 +1,31 @@
+{
+  "name": "@ai-reality/narrative",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Moteur de narration : sélection des moments, arcs, script d'épisode, confessionnal, validation (lecture seule sur la simulation)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ai-reality/engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@ai-reality/testkit": "workspace:*",
+    "@ai-reality/storage-memory": "workspace:*",
+    "@ai-reality/storage-prisma": "workspace:*",
+    "vitest": "^5.0.3"
+  }
+}
