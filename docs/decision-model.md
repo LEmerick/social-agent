@@ -24,7 +24,7 @@ table `decision` garde la trace des probabilités et du tirage (rejeu, explicabi
 ## 2. Utilité d'une option
 
 ```
-U(option) = base + traits + relation + objectifs + agenda + directive + issue espérée − coût − habituation
+U(option) = base + traits + relation + objectifs + agenda + directive + issue espérée − coût − habituation − répétition
 ```
 
 Chaque terme est lisible séparément (`utilityBreakdown`). Les profils par action sont dans `utility-profiles.ts`.
@@ -39,7 +39,8 @@ Chaque terme est lisible séparément (`utilityBreakdown`). Les profils par acti
 | `directive`     | `DirectiveBiases` : `actions[a]` + `targets[t]` + 1 si `prefer`. `forbid` ⇒ utilité −∞ (probabilité 0, sauf si tout est interdit). Mode orienté : la personnalité peut l'emporter.                                                                                                                                                                                     |
 | `issue espérée` | 1,2 × (1 − 0,5 × réactivité) × espérance de valence des issues (§4). L'impulsif ignore une partie du risque. Nul pour les actions à issue unique.                                                                                                                                                                                                                      |
 | `coût`          | −0,06 × énergie × (1 + fatigue) ; −2 × crédits / solde.                                                                                                                                                                                                                                                                                                                |
-| `habituation`   | −0,4 par répétition du jour (même acteur, action, cible), en écho de la règle `habituation@1`.                                                                                                                                                                                                                                                                         |
+| `habituation`   | −0,6 par répétition du jour (même acteur, action, cible), en écho de la règle `habituation@1`.                                                                                                                                                                                                                                                                         |
+| `répétition`    | −1 × (1 − (écart − 1) / 6) si la même action vers la même cible a eu lieu 1 à 6 ticks plus tôt (`dailyCounts`, clé `actor\|action~last\|target`) : refaire tout de suite la même chose est le plus pénalisé. Sans effet sans cible.                                                                                                                                    |
 
 Les options qui ne diffèrent que par le fait (`share_secret` × N faits) forment un **groupe** : elles partagent le même
 calcul et pèsent ensemble comme une seule option (`− T·ln N`), sinon un personnage qui connaît beaucoup de faits ne
@@ -178,7 +179,8 @@ Le coût d'une époque croît avec le journal du monde (hors périmètre du mod�
 | -------------------------------------------- | ---------------------- | --------------------------------------------------------------------- |
 | `temperature.min` / `max` / `fixed`          | 0,15 / 1,0 / —         | Température = `min + (max − min) × réactivité` ; `fixed: 0` ⇒ maximum |
 | `utility.outcomeWeight`                      | 1,2                    | Poids de l'issue espérée                                              |
-| `utility.habituationPenalty`                 | 0,4                    | Pénalité par répétition du jour                                       |
+| `utility.habituationPenalty`                 | 0,6                    | Pénalité par répétition du jour                                       |
+| `utility.repetitionPenalty`                  | 1                      | Pénalité d'une répétition immédiate, décroît sur 6 ticks              |
 | `rollouts`, `horizon`                        | selon les traits       | Imposent le plan Monte Carlo                                          |
 | `minRollouts` / `maxRollouts` / `maxHorizon` | 60 / 400 / 4           | Bornes du plan                                                        |
 | `maxCandidates`                              | 6 (choix), 12 (joueur) | Options réellement simulées                                           |

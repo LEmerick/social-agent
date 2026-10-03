@@ -96,9 +96,11 @@ describe('propagation : rumeurs et mensonges', () => {
       isTrue: false,
       inventedById: alexandre,
       predicate: 'aurait trahi',
-      objectId: thomas,
+      objectText: 'toute la maison',
     });
+    // La rumeur parle d'un tiers : on ne raconte pas à la cible sa propre vie.
     expect([alexandre, thomas]).not.toContain(rumor?.subjectId);
+    expect(rumor?.objectId).toBeNull();
     const event = r.journal.events.find((e) => e.type === 'rumor_spread');
     expect(rumor?.originEventId).toBe(event?.id);
     // L'inventeur sait que c'est faux ; la cible y croit ; le chaînage part de l'inventeur.
@@ -116,7 +118,8 @@ describe('propagation : rumeurs et mensonges', () => {
       outcomes: { lie: 'detected' },
     });
     const lie = Object.values(r.state.facts).find((f) => !f.isTrue);
-    expect(lie).toMatchObject({ inventedById: alexandre, subjectId: alexandre, objectId: thomas });
+    expect(lie).toMatchObject({ inventedById: alexandre, subjectId: alexandre });
+    expect([alexandre, thomas]).not.toContain(lie?.objectId);
     expect(knowledgeOf(r.state, thomas, lie?.id ?? '')[0]).toMatchObject({
       belief: 'disbelieves',
       toldById: alexandre,

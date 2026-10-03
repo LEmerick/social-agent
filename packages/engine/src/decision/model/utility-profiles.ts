@@ -43,7 +43,7 @@ export const PROFILES: Readonly<Record<ActionId, Profile>> = {
   apologize: P(0.1, { coop: 0.8, ally: 0.2 }),
   provoke: P(-0.8, { rival: 0.8, react: 0.6, riv: 1.2, rel: -0.5, coop: -0.5 }),
   insult: P(-1.0, { rival: 0.6, react: 0.8, riv: 1.2, rel: -0.6, coop: -0.6 }),
-  propose_alliance: P(0, { ambition: 0.8, influence: 0.6, coop: 0.3, rel: 0.5 }),
+  propose_alliance: P(0, { ambition: 0.8, influence: 0.6, coop: 0.3, rel: 0.5, riv: -0.6 }),
   break_alliance: P(-1.4, { ambition: 0.6, decep: 0.4, ally: -2.4, riv: 0.6 }),
   request_favor: P(0, { ambition: 0.4, rel: 0.3, coop: -0.2 }),
   negotiate_vote: P(0.2, { ambition: 0.6, influence: 0.6, decep: 0.3 }),
