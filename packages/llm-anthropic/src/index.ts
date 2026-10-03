@@ -5,4 +5,4 @@ export {
   buildMessageParams,
   toOutputSchema,
 } from './anthropic-llm.js';
-export { DEFAULT_MODELS, type ModelMap, acceptsTemperature } from './models.js';
+export { DEFAULT_MODELS, type ModelMap, acceptsEffort, acceptsTemperature } from './models.js';

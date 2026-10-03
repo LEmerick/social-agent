@@ -1,0 +1,65 @@
+{
+  "model": "scripted-chain",
+  "promptHash": "052696f310405b0c170cb85978c3847092bf75d76c6f5e4f42f086135a0799de",
+  "purpose": "evaluate",
+  "request": {
+    "effort": "low",
+    "maxTokens": 2000,
+    "messages": [
+      {
+        "content": "Tu es le juge de la scène : décide de l’issue de cette interaction, avant que les personnages ne parlent.\nAlexandre tente : propose_alliance envers Sarah.\nIssues possibles (de la plus favorable à l’initiateur à la moins favorable) :\n- accepted (la cible accepte sans réserve)\n- accepted_conditional (la cible accepte, mais à des conditions qu’elle énonce)\n- deflected (la cible esquive, change de sujet ou répond à côté sans trancher)\n- refused (la cible refuse nettement)\n- backfired (l’action se retourne contre celui qui l’a tentée)\nRaisonne du point de vue de Sarah : son caractère, ses relations et ce qu’il sait.\nRéponds : {\"outcome\":\"<une issue de la liste>\",\"distribution\":[{\"outcome\":\"<issue>\",\"p\":0.0}],\"reason\":\"<une phrase>\"}.",
+        "role": "user"
+      }
+    ],
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "distribution": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "outcome": {
+                "type": "string"
+              },
+              "p": {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "outcome",
+              "p"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "system": {
+      "stable": "Tu es Sarah (29 ans, femme, originaire de Nantes).\n\nTon tempérament :\n- Charisme (60/100) : Tu as une présence correcte, sans éclipser personne.\n- Ambition (50/100) : Tu veux réussir, sans y sacrifier le reste.\n- Empathie (65/100) : Tu remarques l’humeur des autres quand elle est évidente.\n- Loyauté (75/100) : Tu défends tes alliés et tu tiens parole, même quand cela te coûte.\n- Impulsivité (30/100) : Tu réfléchis avant d’agir et tu gardes ton sang-froid.\n- Manipulation (25/100) : Tu es franc et tu supportes mal la ruse.\n- Sociabilité (70/100) : Tu vas vers les autres, tu lances les conversations et tu aimes le groupe.\n- Compétitivité (40/100) : Tu aimes gagner, mais tu sais perdre.\n\nTa façon de parler : naturelle, adaptée à la situation.\n\nTu ne sais que ce que ton personnage a vécu ou appris. Tu ne révèles jamais un fait que tu ignores, et tu restes cohérent avec ton tempérament.\n\nCadre : tu participes à une télé-réalité fictive, entouré d’autres candidats. Tout se passe en français.\nRègles absolues :\n1. Tu n’utilises que ce que contient la section « Ce que vous savez » et ce que tu as vécu ; tu n’inventes aucun fait.\n2. Tu ne révèles jamais un fait absent de cette liste ; quand tu en évoques un, cite son identifiant entre crochets dans `reveals`.\n3. Tu restes cohérent avec ton tempérament et tes relations.\n4. Tu réponds uniquement par un JSON valide conforme au schéma demandé, sans texte autour.",
+      "variable": "Vous êtes Sarah (sarah).\nTraits : charisma 60, ambition 50, empathy 65, loyalty 75, impulsivity 30, manipulation 25, sociability 70, competitiveness 40.\nÉtat : energy 100, morale 60, popularity 50, influence 50, reputation 50 ; crédits 100.\n\nObjectifs :\n- (private) Protéger son secret\n\nIntentions en cours :\n- aucune\n\nVos relations (votre ressenti) :\n- Alexandre (met) : trust 30, affection 0, rivalry 0, respect 50, fear 0, attraction 0, alliance 0\n- Léa (close) : trust 70, affection 40, rivalry 0, respect 50, fear 0, attraction 0, alliance 80 [allié secret]\n\nCe que vous savez (et rien de plus) :\n- [01960000-0000-7000-8000-000000005001] Sarah cache un secret : « a déjà participé à une autre émission » (secret ; confiance 100 %, vous y croyez ; su depuis le début, époque 0, tick 0)\n\nSituation :\nLieu : Jardin.\nPrésents : Alexandre."
+    },
+    "temperature": null,
+    "tier": "dialogue"
+  },
+  "response": {
+    "text": "{\"outcome\":\"accepted\",\"reason\":\"Sarah accepte.\"}"
+  },
+  "usage": {
+    "cachedTokens": 0,
+    "inputTokens": 0,
+    "outputTokens": 0
+  }
+}

@@ -125,6 +125,34 @@ export function journalContract(h: HarnessRef): void {
       expect(edges.filter((r) => r.sourceId === C.alexandre && r.targetId === C.sarah)).toEqual(next.relationships);
     });
 
+    it('commitTick : goals insère les nouveaux objectifs et met à jour les existants (relus par listByWorld)', async () => {
+      await withEpoch(h);
+      const existing = (await h().storage.tx((s) => s.goals.listByWorld(IDS.world)))[0];
+      if (!existing) throw new Error('fixture sans objectif');
+      const created = {
+        ...existing,
+        id: fixedId(0x40, 80),
+        description: 'objectif de réflexion',
+        status: 'open' as const,
+        createdEpoch: 0,
+        closedEpoch: null,
+      };
+      await h().storage.tx((s) => s.journal.commitTick({ ...emptyTickBatch(EPOCH_0.id, 3), goals: [created] }));
+      await h().storage.tx((s) =>
+        s.journal.commitTick({
+          ...emptyTickBatch(EPOCH_0.id, 4),
+          goals: [{ ...existing, status: 'abandoned', createdEpoch: null, closedEpoch: 0 }],
+        }),
+      );
+      const goals = await h().storage.tx((s) => s.goals.listByWorld(IDS.world));
+      expect(goals.find((g) => g.id === created.id)).toEqual(created);
+      expect(goals.find((g) => g.id === existing.id)).toEqual({
+        ...existing,
+        status: 'abandoned',
+        closedEpoch: 0,
+      });
+    });
+
     it('reweighScoreEntries remplace les poids sans toucher aux impacts ; updateScores fusionne les scores', async () => {
       await withEpoch(h);
       const batch = tick3Batch();

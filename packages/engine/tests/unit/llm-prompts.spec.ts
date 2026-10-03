@@ -61,6 +61,7 @@ describe('snapshot des prompts', () => {
         purpose: r.purpose,
         tier: r.tier,
         maxTokens: r.maxTokens,
+        effort: r.effort ?? null,
         stable: r.system.stable,
         variable: r.system.variable ?? null,
         messages: r.messages,

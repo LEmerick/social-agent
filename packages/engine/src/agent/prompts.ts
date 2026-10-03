@@ -3,7 +3,7 @@
  * à l'autre) : `system.stable` = persona + règles communes (rien qui varie) ; `system.variable` = contexte rendu de
  * l'agent ; la consigne de la tâche est dans le message utilisateur.
  */
-import type { LlmRequest } from '../llm/index.js';
+import type { LlmEffort, LlmRequest } from '../llm/index.js';
 import type { Id } from '../state/types.js';
 import type { AgentContext } from './context.js';
 import { renderAgentContext } from './context-render.js';
@@ -82,6 +82,7 @@ export interface AgentPromptParts {
   readonly extras?: readonly string[];
   readonly task: string;
   readonly maxTokens: number;
+  readonly effort?: LlmEffort;
 }
 
 /** Requête de base d'un appel d'agent : tout ce qui est commun aux tâches, sans le schéma de sortie. */
@@ -93,9 +94,21 @@ export function agentRequest(p: AgentPromptParts): Omit<LlmRequest, 'output'> {
     system: { stable: stableSystem(p.persona), variable },
     messages: [{ role: 'user', content: p.task }],
     maxTokens: p.maxTokens,
+    ...(p.effort ? { effort: p.effort } : {}),
     characterId: p.ctx.identity.id,
   };
 }
+
+/** Effort de raisonnement par tâche : `low` pour les jugements courts, `medium` pour la production de contenu. */
+export const EFFORT = {
+  plan: 'medium',
+  speak: 'medium',
+  reflect: 'medium',
+  interview: 'medium',
+  choose: 'low',
+  judge: 'low',
+  verify: 'low',
+} as const satisfies Record<string, LlmEffort>;
 
 /** Plafonds de sortie par tâche. Large : les modèles récents réfléchissent avant de répondre (jetons comptés dans `max_tokens`). */
 export const MAX_TOKENS = {

@@ -29,7 +29,7 @@ import type {
   UtteranceRecord,
 } from '../state/journal.js';
 import { type Id, type RelationshipEdge, type SimState, relKey } from '../state/types.js';
-import { type DialogueGenerator, SummaryDialogue } from './dialogue.js';
+import { type DialogueGenerator, type DialogueVerification, SummaryDialogue } from './dialogue.js';
 import {
   type CarryLog,
   type ScreenedReveals,
@@ -203,6 +203,7 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
               ignored: screened.ignored,
               ...(confrontation ? { traitorId: confrontation.traitorId } : {}),
             },
+            spoken.verification,
           ),
         );
         screened.utterances.forEach((u, seq): void => {
@@ -307,6 +308,7 @@ function interactionRecord(
   bystanderIds: readonly Id[],
   eavesdropping: boolean,
   facts: Record<string, unknown>,
+  verification?: DialogueVerification,
 ): InteractionRecord {
   const target = option.targetId;
   return {
@@ -320,7 +322,13 @@ function interactionRecord(
     action: option.action,
     outcome,
     mode,
-    classification: { category: def.category, catalogVersion: def.version, facts },
+    // `verification` : verdict du vérificateur LLM (tentatives, raisons, repli, faits ignorés) ; absent hors dialogue LLM.
+    classification: {
+      category: def.category,
+      catalogVersion: def.version,
+      facts,
+      ...(verification ? { verification: { ...verification } } : {}),
+    },
     participants: [
       { characterId: actorId, role: eavesdropping ? 'eavesdropper' : 'speaker' },
       // La cible d'une écoute indiscrète ne s'adresse pas à l'écouteur : elle reste simple présente.

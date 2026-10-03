@@ -1,48 +1,56 @@
 {
-  "model": "scripted-alliance",
-  "promptHash": "8faff988ec43d0c2b55da6d8559327f87f546db3e2c6804830a1a415f7ee11ea",
-  "purpose": "evaluate",
+  "model": "scripted-chain",
+  "promptHash": "ee5513d57131c1b084b2d6c4f78bb1386fa0a629ed30e262dfa87ddaac5001ca",
+  "purpose": "speak",
   "request": {
-    "maxTokens": 2000,
+    "effort": "medium",
+    "maxTokens": 2500,
     "messages": [
       {
-        "content": "Choisis ce que ton personnage fait maintenant, parmi ces options (et seulement celles-ci) :\n1. small_talk → Sarah\n2. compliment → Sarah\n3. probe → Sarah\n4. flirt → Sarah\n5. provoke → Sarah\n6. insult → Sarah\n7. propose_alliance → Sarah\n8. request_favor → Sarah\n9. spread_rumor → Sarah\n10. lie → Sarah\n11. deflect → Sarah\n12. confront → Sarah\n13. accuse → Sarah\n14. threaten → Sarah\n15. sabotage → Sarah\n16. avoid → Sarah\n17. rest\n0. none — ne rien faire\nRéponds : {\"choice\":\"<numéro ou none>\",\"distribution\":[{\"choice\":\"<numéro>\",\"p\":0.0}],\"reason\":\"<une phrase>\"}.\n`distribution` (facultative) donne tes probabilités par numéro ; `choice` est l’option retenue.",
+        "content": "Action en cours : propose_alliance (avec Sarah).\nIssue déjà décidée : accepted (la cible accepte sans réserve).\nTour 1 sur 8 au plus.\nTu prends la parole : dis la réplique de ton personnage pour cette action.\nTa réplique doit mener à cette issue sans la contredire ni la nommer.\nMets `wantsToContinue` à false seulement si l’échange est terminé.\nRéponds : {\"text\",\"intent\",\"tone\",\"emotion\",\"reveals\",\"mentions\",\"wantsToContinue\"}.",
         "role": "user"
       }
     ],
     "schema": {
       "additionalProperties": false,
       "properties": {
-        "choice": {
+        "emotion": {
           "type": "string"
         },
-        "distribution": {
+        "intent": {
+          "type": "string"
+        },
+        "mentions": {
           "items": {
-            "additionalProperties": false,
-            "properties": {
-              "choice": {
-                "type": "string"
-              },
-              "p": {
-                "maximum": 1,
-                "minimum": 0,
-                "type": "number"
-              }
-            },
-            "required": [
-              "choice",
-              "p"
-            ],
-            "type": "object"
+            "type": "string"
           },
           "type": "array"
         },
-        "reason": {
+        "reveals": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "text": {
+          "minLength": 1,
           "type": "string"
+        },
+        "tone": {
+          "type": "string"
+        },
+        "wantsToContinue": {
+          "type": "boolean"
         }
       },
       "required": [
-        "choice"
+        "text",
+        "intent",
+        "tone",
+        "emotion",
+        "reveals",
+        "mentions",
+        "wantsToContinue"
       ],
       "type": "object"
     },
@@ -54,7 +62,7 @@
     "tier": "dialogue"
   },
   "response": {
-    "text": "{\"choice\":\"7\",\"reason\":\"Je veux Sarah de mon côté.\"}"
+    "text": "{\"text\":\"Sarah, associons-nous, toi et moi.\",\"intent\":\"propose_alliance\",\"tone\":\"posé\",\"emotion\":\"confiance\",\"reveals\":[],\"mentions\":[\"Sarah\"],\"wantsToContinue\":false}"
   },
   "usage": {
     "cachedTokens": 0,

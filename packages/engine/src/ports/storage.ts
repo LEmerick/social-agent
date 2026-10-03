@@ -183,6 +183,11 @@ export interface CharacterRepository {
 
 export interface GoalRepository {
   insert(goal: GoalRecord): Promise<void>;
+  /**
+   * Insère l'objectif, ou met à jour celui de même identifiant (description, statut, cible, `closedEpoch`).
+   * `createdEpoch` n'est écrit qu'à la création : une mise à jour le conserve.
+   */
+  upsert(goal: GoalRecord): Promise<void>;
   /** Triés par `characterId`, puis `id`. */
   listByWorld(worldId: string): Promise<GoalRecord[]>;
 }

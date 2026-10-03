@@ -24,6 +24,9 @@ function fakeStorage(insertError?: DomainError) {
       insert: async (g) => {
         goals.push(g);
       },
+      upsert: async (g) => {
+        goals.push(g);
+      },
       listByWorld: async () => goals,
     },
   };

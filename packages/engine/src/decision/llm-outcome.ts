@@ -3,7 +3,8 @@
  * autorisées par `actionDef(...).outcomes`. Une issue hors de cette liste est rejetée.
  */
 import { buildAgentContext } from '../agent/context.js';
-import { MAX_TOKENS, agentRequest, outcomeLine } from '../agent/prompts.js';
+import { renderFactText } from '../knowledge/render.js';
+import { EFFORT, MAX_TOKENS, agentRequest, outcomeLine } from '../agent/prompts.js';
 import { OutcomeJudgeSchema } from '../agent/schemas.js';
 import { situationOf } from '../agent/situation.js';
 import { DomainError } from '../core/errors.js';
@@ -43,11 +44,7 @@ export class LlmOutcomeModel implements OutcomeModel {
     const ctx = buildAgentContext(state, judgedId, situationOf(state, judgedId));
     const actorName = state.characters[actorId]?.firstName ?? actorId;
     const fact = option.factId === null ? undefined : state.facts[option.factId];
-    const factText = fact
-      ? [fact.subjectId ? state.characters[fact.subjectId]?.firstName : null, fact.predicate, fact.objectText]
-          .filter((p): p is string => typeof p === 'string' && p !== '')
-          .join(' ')
-      : null;
+    const factText = fact ? renderFactText(state, fact) : null;
 
     const task = [
       'Tu es le juge de la scène : décide de l’issue de cette interaction, avant que les personnages ne parlent.',
@@ -71,6 +68,7 @@ export class LlmOutcomeModel implements OutcomeModel {
           ctx,
           task,
           maxTokens: MAX_TOKENS.judge,
+          effort: EFFORT.judge,
         }),
         output: OutcomeJudgeSchema,
       },

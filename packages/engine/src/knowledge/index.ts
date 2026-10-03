@@ -1,5 +1,6 @@
 /** Connaissances, propagation et contexte d'agent (M4, partie pure). */
 export { type FactInput, type RumorInput, type RumorResult, createFact, createRumor } from './facts.js';
+export { type RenderableFact, renderFactText } from './render.js';
 export { type KnowledgeFilter, type KnownFact, bestEdge, edgesOf, knows, of, provenance } from './query.js';
 export {
   ALLY_MIN_ALLIANCE,

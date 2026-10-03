@@ -20,6 +20,8 @@ export interface PromptFingerprint {
   readonly schema: Record<string, unknown> | null;
   readonly temperature: number | null;
   readonly maxTokens: number | null;
+  /** Absent quand aucun effort n'est demandé : les empreintes antérieures à ce champ restent valides. */
+  readonly effort?: string;
 }
 
 export function promptFingerprint(req: LlmRequest): PromptFingerprint {
@@ -30,6 +32,7 @@ export function promptFingerprint(req: LlmRequest): PromptFingerprint {
     schema: req.output ? jsonSchemaOf(req.output) : null,
     temperature: req.temperature ?? null,
     maxTokens: req.maxTokens ?? null,
+    ...(req.effort === undefined ? {} : { effort: req.effort }),
   };
 }
 

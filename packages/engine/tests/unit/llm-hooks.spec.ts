@@ -174,5 +174,15 @@ describe('agentMemoryHook (phase 6)', () => {
     expect(state.knowledge[edge.id]).toEqual(edge);
     // Le premier objectif ouvert est abandonné.
     expect(state.characters[C.sarah]!.goals.find((g) => g.id === goalsBefore[0]!.id)!.status).toBe('abandoned');
+    // Le changement est aussi dans le lot de clôture (persisté par commitTick, relu par loadSimState).
+    expect(ctx.batch.goals).toEqual([
+      expect.objectContaining({
+        ...goalsBefore[0]!,
+        characterId: C.sarah,
+        status: 'abandoned',
+        createdEpoch: null,
+        closedEpoch: 0,
+      }),
+    ]);
   });
 });

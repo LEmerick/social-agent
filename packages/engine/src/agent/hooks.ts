@@ -8,7 +8,7 @@ import { bestEdge } from '../knowledge/query.js';
 import { memoriesFromEvents } from '../memory/from-events.js';
 import type { MemoryService } from '../memory/service.js';
 import type { StoragePort } from '../ports/storage.js';
-import type { EventRecord } from '../state/journal.js';
+import { type EventRecord, goalRecordOf } from '../state/journal.js';
 import type { CharacterNode, Id, Intention, KnowledgeEdge, SimState } from '../state/types.js';
 import { buildAgentContext } from './context.js';
 import type { AgentRuntime } from './runtime.js';
@@ -141,7 +141,9 @@ export function agentMemoryHook(runtime: AgentRuntime, memory: MemoryService, ev
       for (const update of reflection.goalUpdates) {
         const goal = open[update.goalIndex];
         if (!goal) continue;
-        character.goals = character.goals.map((g) => (g.id === goal.id ? { ...g, status: update.status } : g));
+        const updated = { ...goal, status: update.status };
+        character.goals = character.goals.map((g) => (g.id === goal.id ? updated : g));
+        batch.goals.push(goalRecordOf(character.id, updated, ctx.epochNumber, false));
       }
     }
   };

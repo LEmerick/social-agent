@@ -39,6 +39,11 @@ describe('scénario alliance rejoué (ReplayLLM)', () => {
       initiatorId: C.alexandre,
     });
 
+    // Le verdict du vérificateur est journalisé dans la classification de l'interaction.
+    expect(journal.interactions[0]!.classification).toMatchObject({
+      verification: { verified: true, attempts: 1, fallback: false, reasons: [], ignoredReveals: [] },
+    });
+
     expect(journal.utterances.map((u) => [u.speakerId, u.intent, u.volume])).toEqual([
       [C.alexandre, 'propose_alliance', 'whisper'],
       [C.sarah, 'accept_with_conditions', 'whisper'],

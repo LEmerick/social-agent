@@ -10,7 +10,7 @@ import type { LLMPort, LlmTier } from '../llm/index.js';
 import { completeStructured } from '../llm/index.js';
 import type { DirectiveBiases, Id, Intention } from '../state/types.js';
 import type { AgentContext } from './context.js';
-import { MAX_TOKENS, agentRequest, cleanId, nameIndex, normName, outcomeLine, splitKnown } from './prompts.js';
+import { EFFORT, MAX_TOKENS, agentRequest, cleanId, nameIndex, normName, outcomeLine, splitKnown } from './prompts.js';
 import {
   type InterviewOutput,
   type PlanOutput,
@@ -162,6 +162,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
             extras,
             task,
             maxTokens: MAX_TOKENS.plan,
+            effort: EFFORT.plan,
           }),
           output: PlanSchema,
         },
@@ -240,6 +241,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
             ctx,
             task,
             maxTokens: MAX_TOKENS.speak,
+            effort: EFFORT.speak,
           }),
           output: SpeakSchema,
         },
@@ -287,6 +289,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
             extras,
             task,
             maxTokens: MAX_TOKENS.reflect,
+            effort: EFFORT.reflect,
           }),
           output: ReflectSchema,
         },
@@ -332,6 +335,7 @@ export function createAgentRuntime(deps: AgentRuntimeDeps): AgentRuntime {
             ctx,
             task,
             maxTokens: MAX_TOKENS.interview,
+            effort: EFFORT.interview,
           }),
           output: InterviewSchema,
         },

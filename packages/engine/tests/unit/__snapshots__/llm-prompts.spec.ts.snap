@@ -3,6 +3,7 @@
 exports[`snapshot des prompts > plan, choix, issue, réplique, vérification 1`] = `
 [
   {
+    "effort": "medium",
     "maxTokens": 3000,
     "messages": [
       {
@@ -75,6 +76,7 @@ Consigne du joueur (à prendre en compte, sans renier ton caractère) :
 - À éviter : insult",
   },
   {
+    "effort": "low",
     "maxTokens": 2000,
     "messages": [
       {
@@ -139,6 +141,7 @@ Consigne du joueur (les bonus orientent ton choix, sans effacer ton caractère) 
 - À éviter : insult",
   },
   {
+    "effort": "low",
     "maxTokens": 2000,
     "messages": [
       {
@@ -194,13 +197,14 @@ Vos relations (votre ressenti) :
 - Léa (close) : trust 70, affection 40, rivalry 0, respect 50, fear 0, attraction 0, alliance 80 [allié secret]
 
 Ce que vous savez (et rien de plus) :
-- [01960000-0000-7000-8000-000000005001] Sarah hides a déjà participé à une autre émission (secret ; confiance 100 %, vous y croyez ; su depuis le début, époque 0, tick 0)
+- [01960000-0000-7000-8000-000000005001] Sarah cache un secret : « a déjà participé à une autre émission » (secret ; confiance 100 %, vous y croyez ; su depuis le début, époque 0, tick 0)
 
 Situation :
 Lieu : Jardin.
 Présents : Alexandre, Léa, Thomas.",
   },
   {
+    "effort": "medium",
     "maxTokens": 2500,
     "messages": [
       {
@@ -261,6 +265,7 @@ Lieu : Jardin.
 Présents : Sarah, Léa, Thomas.",
   },
   {
+    "effort": "low",
     "maxTokens": 800,
     "messages": [
       {

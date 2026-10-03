@@ -45,8 +45,15 @@ describe('promptHash', () => {
     ['température', { temperature: 0.2 }],
     ['absence de température', { temperature: undefined }],
     ['maxTokens', { maxTokens: 301 }],
+    ['effort', { effort: 'low' }],
+    ['niveau d’effort', { effort: 'high' }],
   ])('change quand %s change', (_name, patch) => {
     expect(promptHash({ ...base, ...patch })).not.toBe(promptHash(base));
+  });
+
+  it("sans effort, l'empreinte reste celle d'avant l'introduction du champ", () => {
+    expect(promptHash({ ...base, effort: undefined })).toBe(promptHash(base));
+    expect(promptHash({ ...base, effort: 'low' })).not.toBe(promptHash({ ...base, effort: 'medium' }));
   });
 
   it("ignore l'objectif et la traçabilité (personnage, époque)", () => {
