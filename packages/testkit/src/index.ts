@@ -22,3 +22,4 @@ export {
   palmiersRelationships,
 } from './fixtures/palmiers.js';
 export * from './llm/index.js';
+export { EMBEDDING_DIMENSIONS, FakeEmbedding } from './fake-embedding.js';

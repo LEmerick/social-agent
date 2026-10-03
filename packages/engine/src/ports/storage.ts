@@ -241,6 +241,50 @@ export interface LlmCallRepository {
   listByEpoch(epochId: string): Promise<LlmCallRecord[]>;
 }
 
+export type MemoryKind = 'episodic' | 'reflection';
+
+/**
+ * Souvenir subjectif à la première personne (table `memory`). Défini ici, avec les autres enregistrements
+ * du port, pour que les adaptateurs l'importent depuis `@ai-reality/engine` ; `memory/types.ts` le ré-exporte.
+ * `salience` est la saillance **à l'époque de référence** (`lastRecalledEpoch`, sinon l'époque de création) ;
+ * la décroissance se calcule à la lecture (voir `memory/decay.ts`).
+ */
+export interface MemoryRecord {
+  readonly id: string;
+  readonly characterId: string;
+  readonly eventId: string | null;
+  readonly epochId: string;
+  readonly kind: MemoryKind;
+  readonly summary: string;
+  readonly emotion: string | null;
+  /** 0..1. */
+  readonly salience: number;
+  readonly aboutCharacterIds: readonly string[];
+  /** Vecteur de dimension 1024, ou `null` tant qu'il n'est pas calculé. */
+  readonly embedding: readonly number[] | null;
+  readonly lastRecalledEpoch: number | null;
+}
+
+/** Résultat d'une recherche vectorielle : similarité cosinus dans [-1, 1]. */
+export interface MemoryHit {
+  readonly record: MemoryRecord;
+  readonly similarity: number;
+}
+
+export interface MemoryRepository {
+  /** `DUPLICATE` si l'identifiant existe ; `NOT_FOUND` si le personnage ou l'event n'existe pas. */
+  insert(records: readonly MemoryRecord[]): Promise<void>;
+  /** Tous les souvenirs du personnage, triés par `id`. */
+  listByCharacter(characterId: string): Promise<MemoryRecord[]>;
+  /**
+   * Les `k` souvenirs **du personnage** les plus proches (distance cosinus), du plus proche au plus lointain
+   * (égalités : `id`). Les souvenirs sans embedding sont ignorés.
+   */
+  search(characterId: string, embedding: readonly number[], k: number): Promise<MemoryHit[]>;
+  /** Met à jour la saillance et la date du dernier rappel. `NOT_FOUND` si le souvenir n'existe pas. */
+  updateRecall(id: string, update: { salience: number; lastRecalledEpoch: number }): Promise<void>;
+}
+
 export interface StorageTx {
   readonly worlds: WorldRepository;
   readonly seasons: SeasonRepository;
@@ -258,6 +302,7 @@ export interface StorageTx {
   readonly characterStates: CharacterStateRepository;
   readonly snapshots: SnapshotRepository;
   readonly llmCalls: LlmCallRepository;
+  readonly memories: MemoryRepository;
 }
 
 export interface StoragePort {
