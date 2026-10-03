@@ -3,6 +3,7 @@
  * et chargement dans `SimState.ext`. Les événements référencés (attribution, adhésion, décompte, déclenchement)
  * doivent déjà être écrits : appeler `saveFormatState` après `journal.commitTick`, dans la même transaction.
  */
+import { DomainError } from '../core/errors.js';
 import type { StoragePort, StorageTx } from '../ports/storage.js';
 import { emptyFormatState, setFormatState, type FormatState } from '../state/format-state.js';
 import type { Id, SimState } from '../state/types.js';
@@ -70,4 +71,28 @@ export async function loadFormatInto(storage: StoragePort, state: SimState): Pro
   const fs = await loadFormatState(storage, state.season.id);
   setFormatState(state, fs);
   return fs;
+}
+
+/** Clé de `TickBatch.ext` qui porte l'instantané du `FormatState` (déposé par les hooks de format en fin de tick). */
+export const FORMAT_BATCH_KEY = 'format';
+
+/**
+ * Enveloppe une transaction de stockage : `journal.commitTick` écrit aussi le `FormatState` du lot
+ * (`ext['format']`) dans la même transaction, une fois les événements écrits. Sans instantané, rien ne change.
+ */
+export function withFormatCommit(tx: StorageTx): StorageTx {
+  return {
+    ...tx,
+    journal: {
+      ...tx.journal,
+      async commitTick(batch) {
+        await tx.journal.commitTick(batch);
+        const snapshot = batch.ext[FORMAT_BATCH_KEY]?.[0] as FormatState | undefined;
+        if (!snapshot) return;
+        const epoch = await tx.epochs.findById(batch.epochId);
+        if (!epoch) throw new DomainError('NOT_FOUND', `Époque ${batch.epochId} introuvable`);
+        await saveFormatState(tx, epoch.seasonId, snapshot);
+      },
+    },
+  };
 }

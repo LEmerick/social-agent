@@ -15,6 +15,9 @@ import { DomainError } from '../core/errors.js';
 import { HeuristicOutcomeModel } from '../decision/heuristic-outcome.js';
 import { type ActionOption, type OutcomeModel, optionKey } from '../decision/ports.js';
 import type { SceneMember, TickContext, TickHook } from '../epoch/types.js';
+import { FORMAT_ACTIONS, dispatchFormatAction } from '../formats/dispatch.js';
+import { absorb, busyOf } from '../formats/hook-kit.js';
+import { withFormatContext } from '../formats/scene-context.js';
 import { betrayalEffects, provenanceSummary, refreshSightings } from '../knowledge/index.js';
 import { actionDef } from '../rules/catalog.js';
 import { availableOptions } from '../rules/options.js';
@@ -81,7 +84,8 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
     const outcomes = ctx.outcome ?? fallback;
     const max = state.world.config.maxInteractionsPerScene;
     const ids = ctx.ids('interaction');
-    const engaged = new Set<Id>();
+    // Les personnages pris par une scène imposée du tick (épreuve, conseil) ne sont pas disponibles.
+    const engaged = new Set<Id>(busyOf(state, ctx.tick));
     const log: CarryLog = new Map();
     refreshSightings(state, ctx.scenes);
 
@@ -118,6 +122,7 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
         if (!def) throw new DomainError('UNKNOWN_ACTION', `Action hors catalogue : ${option.action}`);
 
         const interactionId = ids.next();
+        const sceneCtx = withFormatContext(state, eavesdropping ? sceneOf(view.members) : scene, actorId);
         const result = await outcomes.resolve({ option, actorId, state, rng: ctx.rng('outcome', actorId) });
 
         const volume = def.defaultVolume === 'hidden' ? 'whisper' : def.defaultVolume;
@@ -152,7 +157,7 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
             interactionId,
             locationId: view.scene.locationId,
             witnessIds,
-            ctx: eavesdropping ? sceneOf(view.members) : scene,
+            ctx: sceneCtx,
             causedByEventId: causeOf(ctx, actorId, option, screened),
             extraEffects: confrontation?.effects ?? [],
             ...(confrontation ? { payload: confrontation.payload } : {}),
@@ -210,15 +215,17 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
           const record: UtteranceRecord = { ...u, id: ids.next(), interactionId, seq, tick: ctx.tick };
           batch.utterances.push(record);
         });
+        const actionDecisionId = ids.next();
+        const outcomeDecisionId = ids.next();
         batch.decisions.push(
-          decisionRecord(ctx, ids.next(), 'action', actorId, interactionId, {
+          decisionRecord(ctx, actionDecisionId, 'action', actorId, interactionId, {
             options: decision.distribution ?? options.map(optionKey),
             chosen: option,
             policy: decision.policy,
             rngDraw: decision.rngDraw,
             llmCallId: decision.llmCallId ?? null,
           }),
-          decisionRecord(ctx, ids.next(), 'outcome', actorId, interactionId, {
+          decisionRecord(ctx, outcomeDecisionId, 'outcome', actorId, interactionId, {
             options: result.distribution ?? def.outcomes,
             chosen: result.outcome,
             policy: result.policy,
@@ -226,6 +233,24 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
             llmCallId: result.llmCallId ?? null,
           }),
         );
+        if (FORMAT_ACTIONS.has(option.action)) {
+          // Actions d'objet, de vote et d'espionnage : les services de formats exécutent l'issue (témoins selon la perception).
+          const witnesses =
+            def.defaultVolume === 'hidden' && result.outcome === 'detected'
+              ? ctx.audience(view.scene.id, actorId, 'normal').filter((l) => l.characterId !== option.targetId)
+              : heard;
+          absorb(
+            ctx,
+            dispatchFormatAction(ctx, {
+              actorId,
+              option,
+              outcome: result.outcome,
+              event: resolution.event,
+              witnesses,
+              decisionId: actionDecisionId,
+            }),
+          );
+        }
         batch.events.push(resolution.event);
         batch.effects.push(...resolution.effects);
         batch.ledger.push(...resolution.ledger);
@@ -240,7 +265,11 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
       for (const member of participants) {
         if (count >= max) break;
         if (engaged.has(member.characterId)) continue;
-        const options = availableOptions(state, member.characterId, scene).filter(isPlayable);
+        const options = availableOptions(
+          state,
+          member.characterId,
+          withFormatContext(state, scene, member.characterId),
+        ).filter(isPlayable);
         await play(member.characterId, options, false);
       }
       // Les observateurs (autre zone du lieu) ne font qu'une chose : écouter aux portes les conversations du tick.
@@ -248,7 +277,11 @@ export function interactionHook(deps: InteractionDeps = {}): TickHook {
       for (const member of view.members.filter((m) => m.role === 'observer')) {
         if (count >= max) break;
         if (engaged.has(member.characterId)) continue;
-        const options = availableOptions(state, member.characterId, everyone).filter((o) => o.action === 'eavesdrop');
+        const options = availableOptions(
+          state,
+          member.characterId,
+          withFormatContext(state, everyone, member.characterId),
+        ).filter((o) => o.action === 'eavesdrop');
         await play(member.characterId, options, true);
       }
     }

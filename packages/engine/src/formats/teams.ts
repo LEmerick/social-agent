@@ -121,7 +121,14 @@ export function mergeTeams(
     return team;
   });
   if (sources.length < 2) throw new DomainError('INVALID_MERGE', 'Une fusion demande au moins deux équipes');
-  const members = sources.flatMap((t) => membersOf(fs, t.id, fc.epoch)).sort();
+  // Les éliminés restent dans l'historique de leur ancienne équipe : seuls ceux qui sont en jeu rejoignent la nouvelle.
+  const members = sources
+    .flatMap((t) => membersOf(fs, t.id, fc.epoch))
+    .filter((id) => {
+      const status = state.characters[id]?.status;
+      return status !== undefined && status !== 'eliminated' && status !== 'paused';
+    })
+    .sort();
   const created = createTeam(state, fc, into);
   const out = emptyOutput();
   out.events.push(...created.events);

@@ -42,8 +42,11 @@ export function chargeAction(
   creditCost?: number,
 ): { effects: EffectRecord[]; ledger: LedgerRecord[] } {
   const def = assertInCatalog(state, option.action);
+  // L'énergie est débitée avant (`resolveInteraction` l'a vérifiée au départ) : la revérifier ici refuserait à tort
+  // une action dont l'énergie restante est inférieure à son coût.
   const refusal = costRefusal(state, actorId, option);
-  if (refusal !== null) throw new DomainError('ACTION_REFUSED', `Action ${option.action} refusée (${refusal})`);
+  if (refusal !== null && refusal !== 'energy')
+    throw new DomainError('ACTION_REFUSED', `Action ${option.action} refusée (${refusal})`);
   const amount = state.season.rules.economy.enabled ? (creditCost ?? effectiveCost(state, def).credits) : 0;
   if (amount <= 0) return { effects: [], ledger: [] };
   const actor = state.characters[actorId];
