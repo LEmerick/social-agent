@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { afterAll, describe, expect, it } from 'vitest';
-import { storageContract } from '@ai-reality/testkit';
+import { storageContract, worldRoundTripContract } from '@ai-reality/testkit';
 import { prismaStorage } from '../src/index.js';
 
 // Base de test dédiée. Les tests la vident entre chaque cas : refus explicite de toute autre base.
@@ -12,17 +12,17 @@ if (!databaseName.endsWith('_test')) {
 
 const prisma = new PrismaClient({ datasourceUrl: url });
 
-storageContract('storage-prisma', async () => ({
+const factory = async () => ({
   storage: prismaStorage(prisma),
+  // TRUNCATE ... CASCADE suit les clés étrangères : tout ce qui dépend d'un monde disparaît.
   reset: async () => {
-    // Ordre imposé par les clés étrangères.
-    await prisma.characterTrait.deleteMany();
-    await prisma.character.deleteMany();
-    await prisma.location.deleteMany();
-    await prisma.world.deleteMany();
+    await prisma.$executeRawUnsafe('TRUNCATE TABLE "world", "llm_call" CASCADE');
   },
   close: async () => undefined,
-}));
+});
+
+storageContract('storage-prisma', factory);
+worldRoundTripContract('storage-prisma', factory);
 
 afterAll(async () => {
   await prisma.$disconnect();

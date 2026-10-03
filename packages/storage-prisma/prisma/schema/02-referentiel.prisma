@@ -11,6 +11,7 @@ model World {
   epochs     Epoch[]
   locations  Location[]
   characters Character[]
+  facts      Fact[]
 
   @@map("world")
 }
@@ -69,6 +70,7 @@ model LocationZone {
   location Location @relation(fields: [locationId], references: [id])
   scenes   Scene[]
 
+  @@unique([locationId, slug])
   @@map("location_zone")
 }
 

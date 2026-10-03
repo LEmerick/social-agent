@@ -10,3 +10,24 @@ export * from './state/journal.js';
 export { applyEffect, clamp, defaultEdge, edge } from './state/apply-effect.js';
 export { AUTONOMIES, CharacterSpecSchema, type CharacterSpec } from './character/character-spec.js';
 export { type CharacterService, createCharacterService } from './character/character-service.js';
+export {
+  type AgentProfile,
+  type DecisionWeights,
+  type TraitKey,
+  NEUTRAL_TRAIT,
+  TRAIT_KEYS,
+  compileAgentProfile,
+  decisionWeights,
+  personaPrompt,
+} from './character/compile.js';
+export { GOAL_KINDS, GOAL_ORIGINS, GoalSpecSchema, type GoalSpec } from './character/character-spec.js';
+export {
+  type WorldSetup,
+  type WorldSetupInput,
+  LocationSpecSchema,
+  RouteSpecSchema,
+  WorldSetupSchema,
+} from './world/world-spec.js';
+export { type RoutePlan, shortestRoute } from './world/shortest-route.js';
+export { type WorldService, type WorldSetupResult, createWorldService } from './world/world-service.js';
+export { type LoadOptions, DEFAULT_STATS, loadSimState, mergeSeasonRules, mergeWorldConfig } from './state/load.js';

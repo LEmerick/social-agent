@@ -60,6 +60,7 @@ model CharacterState {
   status      CharacterStatus?
   mood        Json             @default("{}")
   scores      Json             @default("{}")
+  runtime     Json             @default("{}")
 
   character Character @relation(fields: [characterId], references: [id])
   epoch     Epoch     @relation(fields: [epochId], references: [id])
@@ -91,8 +92,8 @@ model ScoreEntry {
   epochId     String    @map("epoch_id") @db.Uuid
   eventId     String    @map("event_id") @db.Uuid
   score       ScoreName
-  weight      Float     @db.Real
-  impact      Float     @db.Real
+  weight      Float
+  impact      Float
   ruleId      String    @map("rule_id")
 
   event Event @relation(fields: [eventId], references: [id])
