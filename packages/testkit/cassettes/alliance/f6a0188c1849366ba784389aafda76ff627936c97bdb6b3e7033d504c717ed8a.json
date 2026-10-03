@@ -1,0 +1,64 @@
+{
+  "model": "scripted-alliance",
+  "promptHash": "f6a0188c1849366ba784389aafda76ff627936c97bdb6b3e7033d504c717ed8a",
+  "purpose": "evaluate",
+  "request": {
+    "maxTokens": 2000,
+    "messages": [
+      {
+        "content": "Choisis ce que ton personnage fait maintenant, parmi ces options (et seulement celles-ci) :\n1. small_talk → Alexandre\n2. compliment → Alexandre\n3. probe → Alexandre\n4. flirt → Alexandre\n5. provoke → Alexandre\n6. insult → Alexandre\n7. propose_alliance → Alexandre\n8. request_favor → Alexandre\n9. share_secret → Alexandre (fait : Sarah hides a déjà participé à une autre émission)\n10. spread_rumor → Alexandre\n11. lie → Alexandre\n12. deflect → Alexandre\n13. confront → Alexandre\n14. accuse → Alexandre\n15. threaten → Alexandre\n16. sabotage → Alexandre\n17. avoid → Alexandre\n18. rest\n0. none — ne rien faire\nRéponds : {\"choice\":\"<numéro ou none>\",\"distribution\":[{\"choice\":\"<numéro>\",\"p\":0.0}],\"reason\":\"<une phrase>\"}.\n`distribution` (facultative) donne tes probabilités par numéro ; `choice` est l’option retenue.",
+        "role": "user"
+      }
+    ],
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "choice": {
+          "type": "string"
+        },
+        "distribution": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "choice": {
+                "type": "string"
+              },
+              "p": {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "choice",
+              "p"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "choice"
+      ],
+      "type": "object"
+    },
+    "system": {
+      "stable": "Tu es Sarah (29 ans, femme, originaire de Nantes).\n\nTon tempérament :\n- Charisme (60/100) : Tu as une présence correcte, sans éclipser personne.\n- Ambition (50/100) : Tu veux réussir, sans y sacrifier le reste.\n- Empathie (65/100) : Tu remarques l’humeur des autres quand elle est évidente.\n- Loyauté (75/100) : Tu défends tes alliés et tu tiens parole, même quand cela te coûte.\n- Impulsivité (30/100) : Tu réfléchis avant d’agir et tu gardes ton sang-froid.\n- Manipulation (25/100) : Tu es franc et tu supportes mal la ruse.\n- Sociabilité (70/100) : Tu vas vers les autres, tu lances les conversations et tu aimes le groupe.\n- Compétitivité (40/100) : Tu aimes gagner, mais tu sais perdre.\n\nTa façon de parler : naturelle, adaptée à la situation.\n\nTu ne sais que ce que ton personnage a vécu ou appris. Tu ne révèles jamais un fait que tu ignores, et tu restes cohérent avec ton tempérament.\n\nCadre : tu participes à une télé-réalité fictive, entouré d’autres candidats. Tout se passe en français.\nRègles absolues :\n1. Tu n’utilises que ce que contient la section « Ce que vous savez » et ce que tu as vécu ; tu n’inventes aucun fait.\n2. Tu ne révèles jamais un fait absent de cette liste ; quand tu en évoques un, cite son identifiant entre crochets dans `reveals`.\n3. Tu restes cohérent avec ton tempérament et tes relations.\n4. Tu réponds uniquement par un JSON valide conforme au schéma demandé, sans texte autour.",
+      "variable": "Vous êtes Sarah (sarah).\nTraits : charisma 60, ambition 50, empathy 65, loyalty 75, impulsivity 30, manipulation 25, sociability 70, competitiveness 40.\nÉtat : energy 100, morale 60, popularity 50, influence 50, reputation 50 ; crédits 100.\n\nObjectifs :\n- (private) Protéger son secret\n\nIntentions en cours :\n- aucune\n\nVos relations (votre ressenti) :\n- Alexandre (met) : trust 38, affection 0, rivalry 0, respect 50, fear 0, attraction 0, alliance 13\n- Léa (close) : trust 70, affection 40, rivalry 0, respect 50, fear 0, attraction 0, alliance 80 [allié secret]\n\nCe que vous savez (et rien de plus) :\n- [01960000-0000-7000-8000-000000005001] Sarah hides a déjà participé à une autre émission (secret ; confiance 100 %, vous y croyez ; su depuis le début, époque 0, tick 0)\n\nSituation :\nLieu : Jardin.\nPrésents : Alexandre."
+    },
+    "temperature": null,
+    "tier": "dialogue"
+  },
+  "response": {
+    "text": "{\"choice\":\"none\"}"
+  },
+  "usage": {
+    "cachedTokens": 0,
+    "inputTokens": 0,
+    "outputTokens": 0
+  }
+}
