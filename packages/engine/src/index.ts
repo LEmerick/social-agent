@@ -34,3 +34,7 @@ export { type LoadOptions, DEFAULT_STATS, loadSimState, mergeSeasonRules, mergeW
 export * from './decision/ports.js';
 export { EngineBus, type EngineEvents, type Phase } from './epoch/bus.js';
 export * from './llm/index.js';
+export * from './epoch/index.js';
+export * from './scene/index.js';
+export { ScriptedDecisionPolicy } from './decision/scripted-policy.js';
+export { loadSimStateWithRuntime } from './state/load-runtime.js';

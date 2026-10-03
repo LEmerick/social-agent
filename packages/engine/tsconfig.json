@@ -5,6 +5,7 @@
     "types": ["node"],
     "paths": {
       "@ai-reality/engine": ["./src/index.ts"],
+      "@ai-reality/engine/llm": ["./src/llm/index.ts"],
       "@ai-reality/testkit": ["../testkit/src/index.ts"],
       "@ai-reality/storage-memory": ["../storage-memory/src/index.ts"],
       "@ai-reality/storage-prisma": ["../storage-prisma/src/index.ts"]
