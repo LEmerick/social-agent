@@ -5,7 +5,7 @@
  * pas le LLM : il est délégué à la politique déterministe fournie à la construction.
  */
 import { buildAgentContext } from '../agent/context.js';
-import { MAX_TOKENS, agentRequest } from '../agent/prompts.js';
+import { EFFORT, MAX_TOKENS, agentRequest } from '../agent/prompts.js';
 import { ChoiceSchema } from '../agent/schemas.js';
 import { situationOf } from '../agent/situation.js';
 import { DomainError } from '../core/errors.js';
@@ -96,6 +96,7 @@ export class LlmDecisionPolicy implements DecisionPolicy {
           extras: biases ? [renderBiases(state, biases)] : [],
           task,
           maxTokens: MAX_TOKENS.choose,
+          effort: EFFORT.choose,
         }),
         output: ChoiceSchema,
       },

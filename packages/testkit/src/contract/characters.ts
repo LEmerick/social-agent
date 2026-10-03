@@ -98,6 +98,27 @@ export function charactersContract(h: HarnessRef): void {
       );
     });
 
+    it('upsert : insère un objectif absent, puis met à jour statut et clôture en conservant createdEpoch', async () => {
+      const fx = await seedWorld(h().storage);
+      const base = fx.goals[0];
+      if (!base) throw new Error('fixture sans objectif');
+      const fresh = {
+        ...base,
+        id: fixedId(0x40, 70),
+        description: 'nouvel objectif',
+        createdEpoch: 2,
+        closedEpoch: null,
+      };
+      await h().storage.tx((s) => s.goals.upsert(fresh));
+      await h().storage.tx((s) => s.goals.upsert({ ...fresh, status: 'achieved', createdEpoch: null, closedEpoch: 3 }));
+      const found = (await h().storage.tx((s) => s.goals.listByWorld(IDS.world))).find((g) => g.id === fresh.id);
+      expect(found).toEqual({ ...fresh, status: 'achieved', createdEpoch: 2, closedEpoch: 3 });
+      await expectCode(
+        h().storage.tx((s) => s.goals.upsert({ ...fresh, characterId: fixedId(0x30, 99) })),
+        'NOT_FOUND',
+      );
+    });
+
     it('un objectif pour un personnage ou une cible inconnus est rejeté (NOT_FOUND) ; id en double ⇒ DUPLICATE', async () => {
       const fx = await seedWorld(h().storage);
       const base = fx.goals[0];

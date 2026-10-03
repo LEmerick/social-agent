@@ -1,8 +1,9 @@
 {
   "model": "scripted-alliance",
-  "promptHash": "fec6000ba6d5276156531d103ffc34adf5c9e4c7ea98a2e3415eeed437da58d5",
+  "promptHash": "5fbc4c53108a785797aed3cbd19f0b875bf1ae269f19d1c82e0d0a6105ffcfa6",
   "purpose": "evaluate",
   "request": {
+    "effort": "low",
     "maxTokens": 2000,
     "messages": [
       {

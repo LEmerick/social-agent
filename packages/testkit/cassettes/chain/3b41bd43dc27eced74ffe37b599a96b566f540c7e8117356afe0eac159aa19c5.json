@@ -1,12 +1,13 @@
 {
-  "model": "scripted-alliance",
-  "promptHash": "8594cc989a48b3a7ccb4e86fd8a9383fec27391ae455c9e7bbd2c8d71b5bc6ab",
+  "model": "scripted-chain",
+  "promptHash": "3b41bd43dc27eced74ffe37b599a96b566f540c7e8117356afe0eac159aa19c5",
   "purpose": "verify",
   "request": {
+    "effort": "low",
     "maxTokens": 800,
     "messages": [
       {
-        "content": "Action : propose_alliance (initiateur : Alexandre, cible : Sarah).\nIssue décidée : accepted_conditional (la cible accepte, mais à des conditions qu’elle énonce).\nÉchange :\nAlexandre : Sarah, toi et moi on irait plus loin ensemble. Une alliance, ça te dit ?\nSarah : D’accord, Alexandre, mais je veux des garanties : pas de coup dans le dos.",
+        "content": "Action : confront (initiateur : Thomas, cible : Alexandre).\nIssue décidée : escalated (le conflit s’ouvre ou monte d’un cran).\nÉchange :\nThomas : Alexandre, on m’a dit que tu t’alliais avec Sarah dans notre dos.",
         "role": "user"
       }
     ],
@@ -34,7 +35,7 @@
     "tier": "fast"
   },
   "response": {
-    "text": "{\"coherent\":true,\"reason\":\"La proposition aboutit à une acceptation conditionnelle.\"}"
+    "text": "{\"coherent\":true,\"reason\":\"L’échange aboutit à l’issue décidée.\"}"
   },
   "usage": {
     "cachedTokens": 0,

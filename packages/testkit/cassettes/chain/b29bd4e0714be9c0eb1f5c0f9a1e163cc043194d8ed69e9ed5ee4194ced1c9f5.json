@@ -1,0 +1,65 @@
+{
+  "model": "scripted-chain",
+  "promptHash": "b29bd4e0714be9c0eb1f5c0f9a1e163cc043194d8ed69e9ed5ee4194ced1c9f5",
+  "purpose": "evaluate",
+  "request": {
+    "effort": "low",
+    "maxTokens": 2000,
+    "messages": [
+      {
+        "content": "Choisis ce que ton personnage fait maintenant, parmi ces options (et seulement celles-ci) :\n1. rest\n0. none — ne rien faire\nRéponds : {\"choice\":\"<numéro ou none>\",\"distribution\":[{\"choice\":\"<numéro>\",\"p\":0.0}],\"reason\":\"<une phrase>\"}.\n`distribution` (facultative) donne tes probabilités par numéro ; `choice` est l’option retenue.",
+        "role": "user"
+      }
+    ],
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "choice": {
+          "type": "string"
+        },
+        "distribution": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "choice": {
+                "type": "string"
+              },
+              "p": {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "choice",
+              "p"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "choice"
+      ],
+      "type": "object"
+    },
+    "system": {
+      "stable": "Tu es Thomas (31 ans, homme, originaire de Marseille).\n\nTon tempérament :\n- Charisme (65/100) : Tu as une présence correcte, sans éclipser personne.\n- Ambition (70/100) : Tu veux gagner, monter et être décisif ; tu planifies à long terme.\n- Empathie (30/100) : Tu perçois mal les émotions des autres et tu t’en soucies peu.\n- Loyauté (50/100) : Tu es fidèle à tes alliés tant que le prix reste raisonnable.\n- Impulsivité (65/100) : Tu pèses tes réponses, mais tu peux t’emporter sous pression.\n- Manipulation (40/100) : Tu sais arrondir la vérité quand c’est utile.\n- Sociabilité (55/100) : Tu parles volontiers aux gens que tu connais déjà.\n- Compétitivité (85/100) : Tu vis tout comme un duel et tu supportes mal d’être battu, surtout par un rival.\n\nTa façon de parler : vif, taquin\n\nTu ne sais que ce que ton personnage a vécu ou appris. Tu ne révèles jamais un fait que tu ignores, et tu restes cohérent avec ton tempérament.\n\nCadre : tu participes à une télé-réalité fictive, entouré d’autres candidats. Tout se passe en français.\nRègles absolues :\n1. Tu n’utilises que ce que contient la section « Ce que vous savez » et ce que tu as vécu ; tu n’inventes aucun fait.\n2. Tu ne révèles jamais un fait absent de cette liste ; quand tu en évoques un, cite son identifiant entre crochets dans `reveals`.\n3. Tu restes cohérent avec ton tempérament et tes relations.\n4. Tu réponds uniquement par un JSON valide conforme au schéma demandé, sans texte autour.",
+      "variable": "Vous êtes Thomas (thomas).\nTraits : charisma 65, ambition 70, empathy 30, loyalty 50, impulsivity 65, manipulation 40, sociability 55, competitiveness 85.\nÉtat : energy 100, morale 60, popularity 50, influence 50, reputation 50 ; crédits 100.\n\nObjectifs :\n- (social) Dépasser Alexandre — visant Alexandre\n\nIntentions en cours :\n- aucune\n\nVos relations (votre ressenti) :\n- aucune\n\nCe que vous savez (et rien de plus) :\n- rien de notable\n\nSituation :\nLieu : Chambres.\nPrésents : personne."
+    },
+    "temperature": null,
+    "tier": "dialogue"
+  },
+  "response": {
+    "text": "{\"choice\":\"none\"}"
+  },
+  "usage": {
+    "cachedTokens": 0,
+    "inputTokens": 0,
+    "outputTokens": 0
+  }
+}

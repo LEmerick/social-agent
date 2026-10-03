@@ -78,6 +78,14 @@ export function commitTick(db: Db, batch: TickBatch): void {
     db.characterStates.set(`${s.characterId}|${s.epochId}`, copy(s));
   }
 
+  for (const g of batch.goals) {
+    require_(db.characters.has(g.characterId), `Personnage ${g.characterId}`);
+    if (g.targetCharacterId !== null)
+      require_(db.characters.has(g.targetCharacterId), `Personnage ${g.targetCharacterId}`);
+    const existing = db.goals.get(g.id);
+    db.goals.set(g.id, copy(existing ? { ...g, createdEpoch: existing.createdEpoch } : g));
+  }
+
   db.epochs.set(epoch.id, { ...epoch, lastCommittedTick: batch.tick });
 }
 

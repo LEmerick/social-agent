@@ -2,8 +2,8 @@
  * Enregistrements append-only produits par la simulation, et lot écrit à chaque tick.
  * Un tick = une transaction de stockage = un `TickBatch`.
  */
-import type { EffectTarget, FactNode, Id, KnowledgeEdge, RelationshipEdge, ScoreName, Volume } from './types.js';
-import type { CharacterStatus } from '../ports/storage.js';
+import type { EffectTarget, FactNode, Goal, Id, KnowledgeEdge, RelationshipEdge, ScoreName, Volume } from './types.js';
+import type { CharacterStatus, GoalRecord } from '../ports/storage.js';
 
 export interface EventParticipant {
   readonly characterId: Id;
@@ -176,6 +176,11 @@ export interface TickBatch {
   /** Projections mises à jour (upsert). */
   readonly relationships: readonly RelationshipEdge[];
   readonly characterStates: readonly CharacterStateRecord[];
+  /**
+   * Objectifs créés ou modifiés pendant le tick (réflexion, missions) : insérés, ou mis à jour par identifiant
+   * (`GoalRepository.upsert`). Relus par `loadSimState`.
+   */
+  readonly goals: readonly GoalRecord[];
   /** Extensions des formats (objets, votes…) : M7. */
   readonly ext: Readonly<Record<string, readonly unknown[]>>;
 }
@@ -198,5 +203,18 @@ export const emptyTickBatch = (epochId: Id, tick: number): TickBatch => ({
   scoreEntries: [],
   relationships: [],
   characterStates: [],
+  goals: [],
   ext: {},
+});
+
+/**
+ * Ligne `GoalRecord` d'un objectif de `SimState` à écrire dans `TickBatch.goals`. `createdEpoch` n'est connu que
+ * pour une création (`null` pour une mise à jour : la valeur en base est conservée) ; `closedEpoch` est posé dès que
+ * l'objectif n'est plus ouvert.
+ */
+export const goalRecordOf = (characterId: Id, goal: Goal, epochNumber: number, created: boolean): GoalRecord => ({
+  ...goal,
+  characterId,
+  createdEpoch: created ? epochNumber : null,
+  closedEpoch: goal.status === 'open' ? null : epochNumber,
 });

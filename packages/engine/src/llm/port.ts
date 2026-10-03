@@ -19,6 +19,8 @@ export const LLM_PURPOSES: readonly LlmPurpose[] = [
 /** `dialogue` = modèle capable (scènes à enjeu) ; `fast` = modèle rapide (évaluateur, small talk). */
 export type LlmTier = 'dialogue' | 'fast';
 
+export type LlmEffort = 'low' | 'medium' | 'high';
+
 export interface LlmMessage {
   readonly role: 'user' | 'assistant';
   readonly content: string;
@@ -42,6 +44,8 @@ export interface LlmRequest<T = unknown> {
   readonly output?: z.ZodType<T> | undefined;
   readonly temperature?: number | undefined;
   readonly maxTokens?: number | undefined;
+  /** Effort de raisonnement demandé au fournisseur (ignoré s'il ne le supporte pas). Participe au hash de prompt. */
+  readonly effort?: LlmEffort | undefined;
   /** Traçabilité uniquement : ne participe pas au hash de prompt. */
   readonly characterId?: string | undefined;
   readonly epochId?: string | undefined;

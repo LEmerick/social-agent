@@ -118,6 +118,10 @@ export function refRepos(db: Db): RefRepos {
         const { createdEpoch, closedEpoch, ...rest } = goal;
         await guard(() => db.characterGoal.create({ data: { ...rest, createdEpoch, closedEpoch } }));
       },
+      async upsert(goal) {
+        const { id, createdEpoch, ...update } = goal;
+        await guard(() => db.characterGoal.upsert({ where: { id }, create: { id, createdEpoch, ...update }, update }));
+      },
       async listByWorld(worldId) {
         const rows = await db.characterGoal.findMany({ where: { character: { worldId } } });
         return rows

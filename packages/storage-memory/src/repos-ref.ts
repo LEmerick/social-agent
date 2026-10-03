@@ -136,6 +136,15 @@ export function refRepos(db: Db): RefRepos {
           if (db.goals.has(goal.id)) throw duplicate(`Objectif ${goal.id}`);
           db.goals.set(goal.id, copy(goal));
         }),
+      upsert: (goal) =>
+        later(() => {
+          require_(db.characters.has(goal.characterId), `Personnage ${goal.characterId}`);
+          if (goal.targetCharacterId !== null) {
+            require_(db.characters.has(goal.targetCharacterId), `Personnage ${goal.targetCharacterId}`);
+          }
+          const existing = db.goals.get(goal.id);
+          db.goals.set(goal.id, copy(existing ? { ...goal, createdEpoch: existing.createdEpoch } : goal));
+        }),
       listByWorld: (worldId) =>
         later(() =>
           [...db.goals.values()]

@@ -11,7 +11,7 @@ import {
   parseStructuredOutput,
 } from '@ai-reality/engine/llm';
 import { randomUUID } from 'node:crypto';
-import { DEFAULT_MODELS, type ModelMap, acceptsTemperature, modelFor } from './models.js';
+import { DEFAULT_MODELS, type ModelMap, acceptsEffort, acceptsTemperature, modelFor } from './models.js';
 
 /** Ce que l'adaptateur utilise du SDK : permet d'injecter un faux client dans les tests. */
 export interface AnthropicClientLike {
@@ -81,13 +81,18 @@ export function buildMessageParams(req: LlmRequest, model: string): Anthropic.Me
     system,
     messages: req.messages.map((m) => ({ role: m.role, content: m.content })),
     ...(req.temperature !== undefined && acceptsTemperature(model) ? { temperature: req.temperature } : {}),
-    ...(req.output
+    ...(req.output || (req.effort !== undefined && acceptsEffort(model))
       ? {
           output_config: {
-            format: {
-              type: 'json_schema',
-              schema: toOutputSchema(jsonSchemaOf(req.output)) as Record<string, unknown>,
-            },
+            ...(req.output
+              ? {
+                  format: {
+                    type: 'json_schema' as const,
+                    schema: toOutputSchema(jsonSchemaOf(req.output)) as Record<string, unknown>,
+                  },
+                }
+              : {}),
+            ...(req.effort !== undefined && acceptsEffort(model) ? { effort: req.effort } : {}),
           },
         }
       : {}),

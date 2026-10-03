@@ -95,6 +95,11 @@ export async function commitTick(db: Db, batch: TickBatch): Promise<void> {
       });
     }
 
+    for (const g of batch.goals) {
+      const { id, createdEpoch, ...update } = g;
+      await db.characterGoal.upsert({ where: { id }, create: { id, createdEpoch, ...update }, update });
+    }
+
     await db.epoch.update({ where: { id: batch.epochId }, data: { lastCommittedTick: batch.tick } });
   });
 }

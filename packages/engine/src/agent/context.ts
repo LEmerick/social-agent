@@ -5,6 +5,7 @@
  * `state.facts`. Les relations sont celles que le personnage a envers les autres (arêtes sortantes), pas l'inverse.
  */
 import { of } from '../knowledge/query.js';
+import { renderFactText } from '../knowledge/render.js';
 import type { Axis, Belief, Id, KnowledgeSource, Intention, ScoreName, SimState, StatKey } from '../state/types.js';
 import { BASE_AXES, relKey } from '../state/types.js';
 
@@ -74,15 +75,6 @@ export interface AgentContext {
 const nameOf = (state: Readonly<SimState>, id: Id | null): string | null =>
   id === null ? null : (state.characters[id]?.firstName ?? null);
 
-/** Phrase lisible d'un fait : « sujet prédicat objet ». */
-function factText(
-  state: Readonly<SimState>,
-  fact: { subjectId: Id | null; predicate: string; objectId: Id | null; objectText: string | null },
-): string {
-  const parts = [nameOf(state, fact.subjectId), fact.predicate, nameOf(state, fact.objectId), fact.objectText];
-  return parts.filter((p): p is string => p !== null && p !== '').join(' ');
-}
-
 /** Construit le contexte filtré d'un personnage. Lève une erreur si le personnage est absent. */
 export function buildAgentContext(state: Readonly<SimState>, characterId: Id, situation: AgentSituation): AgentContext {
   const c = state.characters[characterId];
@@ -94,7 +86,7 @@ export function buildAgentContext(state: Readonly<SimState>, characterId: Id, si
 
   const knowledge: KnownFactView[] = known.map(({ fact, knowledge: k }) => ({
     factId: fact.id,
-    text: factText(state, fact),
+    text: renderFactText(state, fact),
     sensitivity: fact.sensitivity,
     confidence: k.confidence,
     belief: k.belief,

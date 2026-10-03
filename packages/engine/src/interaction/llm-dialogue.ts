@@ -5,7 +5,7 @@
  */
 import { type AgentRuntime, createAgentRuntime } from '../agent/runtime.js';
 import { buildAgentContext, type PreviousTurn } from '../agent/context.js';
-import { MAX_TOKENS, outcomeLine } from '../agent/prompts.js';
+import { EFFORT, MAX_TOKENS, outcomeLine } from '../agent/prompts.js';
 import { VerifySchema } from '../agent/schemas.js';
 import { situationOf } from '../agent/situation.js';
 import { type LLMPort, type LlmTier, LlmInvalidOutputError, completeStructured } from '../llm/index.js';
@@ -159,6 +159,7 @@ export class LlmDialogue implements DialogueGenerator {
         ],
         output: VerifySchema,
         maxTokens: MAX_TOKENS.verify,
+        effort: EFFORT.verify,
       },
       { retries: this.#deps.retries ?? 2 },
     );

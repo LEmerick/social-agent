@@ -1,0 +1,45 @@
+{
+  "model": "scripted-chain",
+  "promptHash": "2c6cb24b9fe2fa6c38186f3bc2db790d8fb41e6c6c6caee4ca57cc1d863c790a",
+  "purpose": "verify",
+  "request": {
+    "effort": "low",
+    "maxTokens": 800,
+    "messages": [
+      {
+        "content": "Action : share_secret (initiateur : Sarah, cible : Léa).\nIssue décidée : believed (la cible croit ce qu’on lui dit).\nÉchange :\nSarah : Thomas, tu sais ce que j’ai appris ? Alexandre et Sarah sont alliés.",
+        "role": "user"
+      }
+    ],
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "coherent": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "coherent",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "system": {
+      "stable": "Tu es le vérificateur d’une télé-réalité fictive. On te donne l’action tentée, l’issue DÉJÀ décidée et la retranscription de l’échange.\nDis si l’échange aboutit bien à cette issue : les répliques doivent y mener et ne pas la contredire (par exemple, un refus net ne vérifie pas une acceptation).\nRéponds uniquement par un JSON : {\"coherent\":true|false,\"reason\":\"<une phrase>\"}.",
+      "variable": null
+    },
+    "temperature": null,
+    "tier": "fast"
+  },
+  "response": {
+    "text": "{\"coherent\":true,\"reason\":\"L’échange aboutit à l’issue décidée.\"}"
+  },
+  "usage": {
+    "cachedTokens": 0,
+    "inputTokens": 0,
+    "outputTokens": 0
+  }
+}

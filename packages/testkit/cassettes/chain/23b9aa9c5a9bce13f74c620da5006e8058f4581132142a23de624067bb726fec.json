@@ -1,0 +1,45 @@
+{
+  "model": "scripted-chain",
+  "promptHash": "23b9aa9c5a9bce13f74c620da5006e8058f4581132142a23de624067bb726fec",
+  "purpose": "verify",
+  "request": {
+    "effort": "low",
+    "maxTokens": 800,
+    "messages": [
+      {
+        "content": "Action : propose_alliance (initiateur : Alexandre, cible : Sarah).\nIssue décidée : accepted (la cible accepte sans réserve).\nÉchange :\nAlexandre : Sarah, associons-nous, toi et moi.",
+        "role": "user"
+      }
+    ],
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "coherent": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "coherent",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "system": {
+      "stable": "Tu es le vérificateur d’une télé-réalité fictive. On te donne l’action tentée, l’issue DÉJÀ décidée et la retranscription de l’échange.\nDis si l’échange aboutit bien à cette issue : les répliques doivent y mener et ne pas la contredire (par exemple, un refus net ne vérifie pas une acceptation).\nRéponds uniquement par un JSON : {\"coherent\":true|false,\"reason\":\"<une phrase>\"}.",
+      "variable": null
+    },
+    "temperature": null,
+    "tier": "fast"
+  },
+  "response": {
+    "text": "{\"coherent\":true,\"reason\":\"L’échange aboutit à l’issue décidée.\"}"
+  },
+  "usage": {
+    "cachedTokens": 0,
+    "inputTokens": 0,
+    "outputTokens": 0
+  }
+}

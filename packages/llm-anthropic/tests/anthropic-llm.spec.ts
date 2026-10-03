@@ -1,7 +1,7 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { describe, expect, it } from 'vitest';
 import { type LlmCallRecord, type LlmRequest, promptHash, z } from '@ai-reality/engine/llm';
-import { type AnthropicClientLike, DEFAULT_MODELS, anthropicLLM, toOutputSchema } from '../src/index.js';
+import { type AnthropicClientLike, DEFAULT_MODELS, acceptsEffort, anthropicLLM, toOutputSchema } from '../src/index.js';
 
 const Reply = z.object({ line: z.string().min(1), mood: z.number().int().min(0).max(100) });
 
@@ -85,6 +85,40 @@ describe('anthropicLLM — forme de la requête', () => {
     expect(calls[0]?.temperature).toBe(0.8);
     expect(calls[0]?.system).toEqual([{ type: 'text', text: 'P', cache_control: { type: 'ephemeral' } }]);
     expect(calls[0]).not.toHaveProperty('output_config');
+  });
+
+  it('effort : transmis dans output_config à Sonnet 5.5 (avec le schéma), omis pour Haiku 4.5', async () => {
+    const { client, calls } = fakeClient(() => message('{"line":"salut","mood":5}'));
+    await anthropicLLM({ client }).complete({ ...req, effort: 'medium' });
+    expect(calls[0]?.output_config).toMatchObject({ effort: 'medium', format: { type: 'json_schema' } });
+
+    const fast = fakeClient(() => message('ok', {}, 'claude-haiku-4-5'));
+    const rest = { ...req, output: undefined, effort: 'low' as const };
+    await anthropicLLM({ client: fast.client }).complete({ ...rest, tier: 'fast' });
+    expect(fast.calls[0]?.model).toBe('claude-haiku-4-5');
+    expect(fast.calls[0]).not.toHaveProperty('output_config');
+  });
+
+  it('effort seul (sans schéma) sur Sonnet 5.5 : output_config ne contient que l’effort ; sans effort, rien n’est ajouté', async () => {
+    const { client, calls } = fakeClient(() => message('ok'));
+    const rest = { ...req, output: undefined };
+    await anthropicLLM({ client }).complete({ ...rest, effort: 'low' });
+    await anthropicLLM({ client }).complete(rest);
+    expect(calls[0]?.output_config).toEqual({ effort: 'low' });
+    expect(calls[1]).not.toHaveProperty('output_config');
+  });
+
+  it('acceptsEffort : Sonnet/Opus/Fable récents oui, Haiku 4.5 et Sonnet 4.5 non', () => {
+    for (const m of [
+      'claude-sonnet-5-5',
+      'claude-sonnet-5',
+      'claude-opus-5-5',
+      'claude-opus-4-8',
+      'claude-fable-5-1',
+    ]) {
+      expect(acceptsEffort(m)).toBe(true);
+    }
+    for (const m of ['claude-haiku-4-5', 'claude-sonnet-4-5', 'claude-opus-4-1']) expect(acceptsEffort(m)).toBe(false);
   });
 
   it('modèles surchargeables ; maxTokens par défaut', async () => {

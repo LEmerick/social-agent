@@ -16,7 +16,10 @@ export interface RecallRequest {
 }
 
 export interface MemoryService {
-  /** Calcule les embeddings des résumés puis enregistre les souvenirs (tous ceux du même personnage). */
+  /**
+   * Calcule les embeddings des résumés puis enregistre les souvenirs (tous ceux du même personnage).
+   * Idempotent : un brouillon dont l'identifiant existe déjà est ignoré (non renvoyé).
+   */
   record(characterId: string, drafts: readonly MemoryDraft[]): Promise<MemoryRecord[]>;
   /**
    * Meilleurs souvenirs du personnage, jamais ceux d'un autre. Les souvenirs renvoyés sont renforcés
@@ -65,9 +68,12 @@ export function createMemoryService(
           );
         }
       }
-      if (drafts.length === 0) return [];
-      const vectors = await embedding.embed(drafts.map((d) => d.summary));
-      const records = drafts.map((draft, i): MemoryRecord => {
+      // Idempotent : les identifiants sont déterministes, un souvenir déjà écrit (reprise après panne) est ignoré.
+      const present = new Set((await storage.tx((s) => s.memories.listByCharacter(characterId))).map((m) => m.id));
+      const fresh = drafts.filter((d) => !present.has(d.id));
+      if (fresh.length === 0) return [];
+      const vectors = await embedding.embed(fresh.map((d) => d.summary));
+      const records = fresh.map((draft, i): MemoryRecord => {
         const vector = vectors[i];
         if (vector?.length !== embedding.dimensions) {
           throw new DomainError('EMBEDDING_INVALID', `Embedding invalide pour le souvenir ${draft.id}`);
