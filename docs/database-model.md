@@ -263,7 +263,8 @@ WITH RECURSIVE chain AS (
   SELECT p.*, chain.depth + 1 FROM knowledge p JOIN chain ON p.id = chain.parent_knowledge_id
 )
 SELECT depth, character_id, source_type, told_by_id, via_event_id FROM chain ORDER BY depth DESC;
--- → alexandre (witnessed) → sarah (told by alexandre) → léa (told by sarah) → thomas (told by léa)
+-- → sarah (witnessed, témoin direct de la proposition) → léa (told by sarah) → thomas (told by léa)
+-- Alexandre, autre témoin direct, a sa propre chaîne à un maillon (cohérent avec l'exemple §10).
 ```
 
 ---
