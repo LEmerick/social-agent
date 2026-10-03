@@ -33,3 +33,4 @@ export { type WorldService, type WorldSetupResult, createWorldService } from './
 export { type LoadOptions, DEFAULT_STATS, loadSimState, mergeSeasonRules, mergeWorldConfig } from './state/load.js';
 export * from './decision/ports.js';
 export { EngineBus, type EngineEvents, type Phase } from './epoch/bus.js';
+export * from './llm/index.js';
