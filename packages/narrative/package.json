@@ -23,9 +23,10 @@
     "@ai-reality/engine": "workspace:*"
   },
   "devDependencies": {
-    "@ai-reality/testkit": "workspace:*",
     "@ai-reality/storage-memory": "workspace:*",
     "@ai-reality/storage-prisma": "workspace:*",
+    "@ai-reality/testkit": "workspace:*",
+    "@prisma/client": "^6",
     "vitest": "^5.0.3"
   }
 }

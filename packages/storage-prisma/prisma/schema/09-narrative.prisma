@@ -1,0 +1,123 @@
+// ───────────── Narration (M10) ─────────────
+// Tables écrites par le seul paquet `narrative` (rôle SQL `ai_reality_narrative`, voir la migration `narrative`).
+// Les identifiants de la simulation (monde, époque, lieu, personnage, event, utterance) sont des références
+// logiques, sans clé étrangère : la narration lit la simulation, elle ne s'y rattache pas.
+
+enum EpisodeStatus {
+  draft
+  validated
+  rejected
+
+  @@map("episode_status")
+}
+
+enum ArcStatus {
+  open
+  closed
+
+  @@map("arc_status")
+}
+
+enum EpisodeLineKind {
+  dialogue
+  confessional
+  voiceover
+
+  @@map("episode_line_kind")
+}
+
+model Episode {
+  id              String        @id @db.Uuid
+  worldId         String        @map("world_id") @db.Uuid
+  epochId         String        @map("epoch_id") @db.Uuid
+  number          Int
+  version         Int           @default(1)
+  title           String
+  synopsis        String
+  status          EpisodeStatus @default(draft)
+  targetSeconds   Int           @map("target_seconds")
+  durationSeconds Int           @default(0) @map("duration_seconds")
+  cliffhanger     String?
+  issues          Json          @default("[]")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  scenes EpisodeScene[]
+  lines  EpisodeLine[]
+  arcs   EpisodeArc[]
+
+  @@unique([epochId, version])
+  @@index([worldId, number])
+  @@map("episode")
+}
+
+model NarrativeArc {
+  id           String    @id @db.Uuid
+  worldId      String    @map("world_id") @db.Uuid
+  title        String
+  status       ArcStatus @default(open)
+  rootEventId  String    @map("root_event_id") @db.Uuid
+  firstEpochId String    @map("first_epoch_id") @db.Uuid
+  lastEpochId  String    @map("last_epoch_id") @db.Uuid
+  characterIds String[]  @default([]) @map("character_ids") @db.Uuid
+  eventIds     String[]  @default([]) @map("event_ids") @db.Uuid
+  importance   Float     @default(0)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  episodes EpisodeArc[]
+
+  @@index([worldId, status])
+  @@map("narrative_arc")
+}
+
+model EpisodeArc {
+  episodeId String @map("episode_id") @db.Uuid
+  arcId     String @map("arc_id") @db.Uuid
+
+  episode Episode      @relation(fields: [episodeId], references: [id])
+  arc     NarrativeArc @relation(fields: [arcId], references: [id])
+
+  @@id([episodeId, arcId])
+  @@map("episode_arc")
+}
+
+model EpisodeScene {
+  id             String   @id @db.Uuid
+  episodeId      String   @map("episode_id") @db.Uuid
+  seq            Int
+  locationId     String   @map("location_id") @db.Uuid
+  tone           String
+  summary        String
+  seconds        Int
+  characterIds   String[] @default([]) @map("character_ids") @db.Uuid
+  sourceEventIds String[] @default([]) @map("source_event_ids") @db.Uuid
+  shots          Json     @default("[]")
+  claims         Json     @default("[]")
+
+  episode Episode       @relation(fields: [episodeId], references: [id])
+  lines   EpisodeLine[]
+
+  @@unique([episodeId, seq])
+  @@map("episode_scene")
+}
+
+model EpisodeLine {
+  id          String          @id @db.Uuid
+  episodeId   String          @map("episode_id") @db.Uuid
+  sceneId     String          @map("scene_id") @db.Uuid
+  seq         Int
+  kind        EpisodeLineKind
+  speakerId   String?         @map("speaker_id") @db.Uuid
+  text        String
+  utteranceId String?         @map("utterance_id") @db.Uuid
+  tone        String?
+  llmCallId   String?         @map("llm_call_id") @db.Uuid
+
+  episode Episode      @relation(fields: [episodeId], references: [id])
+  scene   EpisodeScene @relation(fields: [sceneId], references: [id])
+
+  @@unique([sceneId, seq])
+  @@index([episodeId])
+  @@map("episode_line")
+}
