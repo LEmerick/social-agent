@@ -24,3 +24,4 @@ export {
 export * from './llm/index.js';
 export { type UniformRandomOptions, UniformRandomPolicy } from './policies/uniform-random.js';
 export { EMBEDDING_DIMENSIONS, FakeEmbedding } from './fake-embedding.js';
+export { FIDS, sampleFormatState } from './fixtures/formats.js';

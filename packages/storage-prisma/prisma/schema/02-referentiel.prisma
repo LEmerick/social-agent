@@ -30,6 +30,7 @@ model Season {
   missionDefs     MissionDef[]
   teams           Team[]
   scheduledEvents ScheduledEvent[]
+  formatRuntime   FormatRuntime?
 
   @@unique([worldId, number])
   @@map("season")
