@@ -17,7 +17,6 @@
       "Read(./.env.*)"
     ]
   },
-  "model": "claude-sonnet-5",
   "hooks": {
     "PreToolUse": [
       {

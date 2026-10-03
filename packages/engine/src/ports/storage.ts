@@ -3,18 +3,52 @@
  * (`storage-memory`, `storage-prisma`) les implémentent et doivent passer la même suite de contrat.
  *
  * Erreurs attendues par les adaptateurs :
- * - `DomainError('DUPLICATE', …)` : slug déjà pris dans le même monde ;
- * - `DomainError('NOT_FOUND', …)` : rattachement à un monde inexistant.
+ * - `DomainError('DUPLICATE', …)` : identifiant ou slug déjà pris ;
+ * - `DomainError('NOT_FOUND', …)` : rattachement à un enregistrement inexistant.
+ *
+ * Les lectures de listes renvoient un ordre stable : celui précisé sur chaque méthode.
  */
+import type {
+  CharacterStateRecord,
+  DecisionRecord,
+  EffectRecord,
+  EventRecord,
+  InteractionRecord,
+  LedgerRecord,
+  PresenceRecord,
+  SceneRecord,
+  ScoreEntryRecord,
+  TickBatch,
+  UtteranceRecord,
+} from '../state/journal.js';
+import type {
+  DirectiveBiases,
+  FactNode,
+  Goal,
+  KnowledgeEdge,
+  RelationshipEdge,
+  RouteEdge,
+  ZoneNode,
+} from '../state/types.js';
 
 export type CharacterAutonomy = 'autonomous' | 'guided' | 'directive';
 export type CharacterStatus = 'active' | 'restricted' | 'elimination_pending' | 'eliminated' | 'paused';
+export type EpochStatus = 'pending' | 'running' | 'completed' | 'failed';
 
 export interface WorldRecord {
   readonly id: string;
   readonly name: string;
   readonly seed: string;
   readonly config: Readonly<Record<string, unknown>>;
+}
+
+export interface SeasonRecord {
+  readonly id: string;
+  readonly worldId: string;
+  readonly number: number;
+  readonly rules: Readonly<Record<string, unknown>>;
+  readonly rulesVersion: number;
+  readonly format: Readonly<Record<string, unknown>>;
 }
 
 export interface LocationRecord {
@@ -26,6 +60,10 @@ export interface LocationRecord {
   readonly capacity: number | null;
   readonly isPrivate: boolean;
   readonly visualRef: string | null;
+}
+
+export interface ZoneRecord extends ZoneNode {
+  readonly locationId: string;
 }
 
 export interface CharacterRecord {
@@ -40,26 +78,170 @@ export interface CharacterRecord {
   readonly traits: Readonly<Record<string, number>>;
 }
 
+export interface GoalRecord extends Goal {
+  readonly characterId: string;
+  readonly createdEpoch: number | null;
+  readonly closedEpoch: number | null;
+}
+
+export interface DirectiveRecord {
+  readonly id: string;
+  readonly characterId: string;
+  readonly text: string;
+  readonly fromEpoch: number;
+  readonly toEpoch: number | null;
+  readonly biases: DirectiveBiases | null;
+}
+
+export interface EpochRecord {
+  readonly id: string;
+  readonly worldId: string;
+  readonly seasonId: string;
+  readonly number: number;
+  readonly status: EpochStatus;
+  readonly rngSeed: string;
+  readonly rulesVersion: number;
+  readonly lastCommittedTick: number;
+}
+
+/** Tout le journal d'une époque, dans l'ordre d'écriture. */
+export interface EpochJournal {
+  /** Triés par `tickStart`, puis `id`. */
+  readonly scenes: SceneRecord[];
+  /** Triés par `characterId`, puis `tickStart`. */
+  readonly presences: PresenceRecord[];
+  /** Triées par `tickStart`, puis `id`. */
+  readonly interactions: InteractionRecord[];
+  /** Triées par `interactionId`, puis `seq`. */
+  readonly utterances: UtteranceRecord[];
+  /** Triées par `tick`, puis `id`. */
+  readonly decisions: DecisionRecord[];
+  /** Triés par `seq`. */
+  readonly events: EventRecord[];
+  /** Triés par event (`seq`), puis ordre d'insertion. */
+  readonly effects: EffectRecord[];
+  readonly ledger: LedgerRecord[];
+  readonly scoreEntries: ScoreEntryRecord[];
+}
+
 export interface WorldRepository {
   insert(world: WorldRecord): Promise<void>;
   findById(id: string): Promise<WorldRecord | undefined>;
 }
 
+export interface SeasonRepository {
+  insert(season: SeasonRecord): Promise<void>;
+  findByNumber(worldId: string, number: number): Promise<SeasonRecord | undefined>;
+  /** Met à jour les règles (recalcul des scores après changement de règles). */
+  updateRules(id: string, rules: Readonly<Record<string, unknown>>, rulesVersion: number): Promise<void>;
+}
+
 export interface LocationRepository {
   insert(location: LocationRecord): Promise<void>;
+  /** Triés par `slug`. */
   listByWorld(worldId: string): Promise<LocationRecord[]>;
+}
+
+export interface ZoneRepository {
+  insert(zone: ZoneRecord): Promise<void>;
+  /** Triées par `locationId`, puis `slug`. */
+  listByWorld(worldId: string): Promise<ZoneRecord[]>;
+}
+
+export interface RouteRepository {
+  insert(route: RouteEdge): Promise<void>;
+  /** Triées par `fromLocationId`, puis `toLocationId`. */
+  listByWorld(worldId: string): Promise<RouteEdge[]>;
 }
 
 export interface CharacterRepository {
   insert(character: CharacterRecord): Promise<void>;
   findById(id: string): Promise<CharacterRecord | undefined>;
+  /** Triés par `slug`. */
   listByWorld(worldId: string): Promise<CharacterRecord[]>;
+  updateStatus(id: string, status: CharacterStatus): Promise<void>;
+}
+
+export interface GoalRepository {
+  insert(goal: GoalRecord): Promise<void>;
+  /** Triés par `characterId`, puis `id`. */
+  listByWorld(worldId: string): Promise<GoalRecord[]>;
+}
+
+export interface DirectiveRepository {
+  insert(directive: DirectiveRecord): Promise<void>;
+  /** Directive en vigueur à cette époque (la plus récente), si elle existe. */
+  current(characterId: string, epochNumber: number): Promise<DirectiveRecord | undefined>;
+}
+
+export interface RelationshipRepository {
+  upsert(worldId: string, edges: readonly RelationshipEdge[]): Promise<void>;
+  /** Triées par `sourceId`, puis `targetId`. */
+  listByWorld(worldId: string): Promise<RelationshipEdge[]>;
+}
+
+export interface FactRepository {
+  insert(worldId: string, facts: readonly FactNode[]): Promise<void>;
+  /** Triés par `id`. */
+  listByWorld(worldId: string): Promise<FactNode[]>;
+}
+
+export interface KnowledgeRepository {
+  insert(edges: readonly KnowledgeEdge[]): Promise<void>;
+  /** Triées par `characterId`, puis `id`. */
+  listByWorld(worldId: string): Promise<KnowledgeEdge[]>;
+  /** Chaîne de provenance, de l'origine (profondeur max) jusqu'au personnage. */
+  provenance(characterId: string, factId: string): Promise<KnowledgeEdge[]>;
+}
+
+export interface EpochRepository {
+  insert(epoch: EpochRecord): Promise<void>;
+  findByNumber(worldId: string, number: number): Promise<EpochRecord | undefined>;
+  findById(id: string): Promise<EpochRecord | undefined>;
+  setStatus(id: string, status: EpochStatus): Promise<void>;
+}
+
+export interface JournalRepository {
+  /**
+   * Écrit tout ce qu'un tick a produit et positionne `epoch.lastCommittedTick = batch.tick`.
+   * Doit être appelé dans la transaction du tick.
+   */
+  commitTick(batch: TickBatch): Promise<void>;
+  read(epochId: string): Promise<EpochJournal>;
+  /** Tous les events du monde, triés par `seq` (rejeu). */
+  eventsOfWorld(worldId: string): Promise<EventRecord[]>;
+}
+
+export interface CharacterStateRepository {
+  /** Dernière ligne connue de chaque personnage du monde (reprise, chargement). */
+  latest(worldId: string): Promise<CharacterStateRecord[]>;
+  /** Lignes d'une époque, triées par `characterId`. */
+  listByEpoch(epochId: string): Promise<CharacterStateRecord[]>;
+}
+
+export interface SnapshotRepository {
+  /** Fige les relations à la fin d'une époque (relationship_snapshot). */
+  saveRelationships(epochId: string, edges: readonly RelationshipEdge[]): Promise<void>;
+  /** Triées par `sourceId`, puis `targetId`. */
+  relationships(epochId: string): Promise<RelationshipEdge[]>;
 }
 
 export interface StorageTx {
   readonly worlds: WorldRepository;
+  readonly seasons: SeasonRepository;
   readonly locations: LocationRepository;
+  readonly zones: ZoneRepository;
+  readonly routes: RouteRepository;
   readonly characters: CharacterRepository;
+  readonly goals: GoalRepository;
+  readonly directives: DirectiveRepository;
+  readonly relationships: RelationshipRepository;
+  readonly facts: FactRepository;
+  readonly knowledge: KnowledgeRepository;
+  readonly epochs: EpochRepository;
+  readonly journal: JournalRepository;
+  readonly characterStates: CharacterStateRepository;
+  readonly snapshots: SnapshotRepository;
 }
 
 export interface StoragePort {
