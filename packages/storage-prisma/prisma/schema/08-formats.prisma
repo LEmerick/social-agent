@@ -169,3 +169,13 @@ model ScheduledEvent {
 
   @@map("scheduled_event")
 }
+
+/// Suivi des formats sans table propre : historique d'actions (`action_done`) et présences communes (`present_with`).
+model FormatRuntime {
+  seasonId String @id @map("season_id") @db.Uuid
+  data     Json   @default("{}")
+
+  season Season @relation(fields: [seasonId], references: [id])
+
+  @@map("format_runtime")
+}

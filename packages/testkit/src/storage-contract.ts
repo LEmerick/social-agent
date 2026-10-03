@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe } from 'vitest';
 import { charactersContract } from './contract/characters.js';
+import { formatsContract } from './contract/formats.js';
 import { journalContract } from './contract/journal.js';
 import { knowledgeContract } from './contract/knowledge.js';
 import { llmCallsContract } from './contract/llm-calls.js';
@@ -31,5 +32,6 @@ export function storageContract(name: string, factory: () => Promise<StorageHarn
     knowledgeContract(current);
     journalContract(current);
     llmCallsContract(current);
+    formatsContract(current);
   });
 }

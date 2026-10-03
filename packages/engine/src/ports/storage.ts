@@ -23,6 +23,18 @@ import type {
   UtteranceRecord,
 } from '../state/journal.js';
 import type {
+  ActionRecordNode,
+  ItemDefNode,
+  ItemNode,
+  MissionAssignmentNode,
+  MissionDefNode,
+  ScheduledEventNode,
+  TeamMembershipNode,
+  TeamNode,
+  VoteNode,
+  VoteSessionNode,
+} from '../state/format-state.js';
+import type {
   DirectiveBiases,
   FactNode,
   Goal,
@@ -241,6 +253,77 @@ export interface LlmCallRepository {
   listByEpoch(epochId: string): Promise<LlmCallRecord[]>;
 }
 
+// ───── Formats de jeu (M7) ─────
+// Les types de nœuds sont réexportés ici : les adaptateurs ne voient le moteur que par le point d'entrée du paquet.
+export type {
+  ActionRecordNode,
+  FormatState,
+  ItemDefNode,
+  ItemNode,
+  MissionAssignmentNode,
+  MissionDefNode,
+  MissionReward,
+  PlayedItem,
+  ScheduledEventNode,
+  TeamMembershipNode,
+  TeamNode,
+  VoteNode,
+  VoteResult,
+  VoteRules,
+  VoteSessionNode,
+} from '../state/format-state.js';
+
+/** Suivi des formats sans table dédiée : historique d'actions et présences communes (lus par le DSL). */
+export interface FormatRuntime {
+  readonly actionLog: readonly ActionRecordNode[];
+  readonly presence: Readonly<Record<string, number>>;
+}
+
+/**
+ * Les `upsert*` insèrent ou mettent à jour par clé primaire ; une référence inexistante (saison, lieu, personnage,
+ * définition, événement, époque) lève `NOT_FOUND`, un `(saison, slug)` déjà pris par un autre id `DUPLICATE`.
+ * Les `list*` renvoient tout ce qui dépend de la saison, triés par identifiant (adhésions : équipe, personnage, époque).
+ */
+export interface ItemRepository {
+  upsertDefs(seasonId: string, defs: readonly ItemDefNode[]): Promise<void>;
+  listDefs(seasonId: string): Promise<ItemDefNode[]>;
+  upsertItems(items: readonly ItemNode[]): Promise<void>;
+  listItems(seasonId: string): Promise<ItemNode[]>;
+}
+
+export interface MissionRepository {
+  upsertDefs(seasonId: string, defs: readonly MissionDefNode[]): Promise<void>;
+  listDefs(seasonId: string): Promise<MissionDefNode[]>;
+  upsertAssignments(assignments: readonly MissionAssignmentNode[]): Promise<void>;
+  listAssignments(seasonId: string): Promise<MissionAssignmentNode[]>;
+}
+
+export interface TeamRepository {
+  upsertTeams(seasonId: string, teams: readonly TeamNode[]): Promise<void>;
+  listTeams(seasonId: string): Promise<TeamNode[]>;
+  upsertMemberships(memberships: readonly TeamMembershipNode[]): Promise<void>;
+  listMemberships(seasonId: string): Promise<TeamMembershipNode[]>;
+}
+
+export interface VoteRepository {
+  upsertSessions(sessions: readonly VoteSessionNode[]): Promise<void>;
+  listSessions(seasonId: string): Promise<VoteSessionNode[]>;
+  /** Un bulletin par votant et par session : un second bulletin remplace le premier. */
+  upsertVotes(votes: readonly VoteNode[]): Promise<void>;
+  listVotes(seasonId: string): Promise<VoteNode[]>;
+}
+
+export interface ScheduleRepository {
+  upsert(seasonId: string, events: readonly ScheduledEventNode[]): Promise<void>;
+  list(seasonId: string): Promise<ScheduledEventNode[]>;
+}
+
+export interface FormatRuntimeRepository {
+  save(seasonId: string, runtime: FormatRuntime): Promise<void>;
+  /** Vide si rien n'a été sauvegardé. */
+  load(seasonId: string): Promise<FormatRuntime>;
+}
+
 export interface StorageTx {
   readonly worlds: WorldRepository;
   readonly seasons: SeasonRepository;
@@ -258,6 +341,12 @@ export interface StorageTx {
   readonly characterStates: CharacterStateRepository;
   readonly snapshots: SnapshotRepository;
   readonly llmCalls: LlmCallRepository;
+  readonly items: ItemRepository;
+  readonly missions: MissionRepository;
+  readonly teams: TeamRepository;
+  readonly votes: VoteRepository;
+  readonly schedule: ScheduleRepository;
+  readonly formatRuntime: FormatRuntimeRepository;
 }
 
 export interface StoragePort {

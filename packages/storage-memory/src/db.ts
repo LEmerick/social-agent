@@ -24,6 +24,7 @@ import {
   DomainError,
 } from '@ai-reality/engine';
 import type { LlmCallRecord } from '@ai-reality/engine/llm';
+import { type FormatTables, emptyFormatTables } from './repos-formats.js';
 
 /** Contenu complet du stockage en mémoire : copié au début de chaque transaction. */
 export interface Db {
@@ -54,6 +55,8 @@ export interface Db {
   /** Clé : epochId. */
   snapshots: Map<string, RelationshipEdge[]>;
   llmCalls: Map<string, LlmCallRecord>;
+  /** Formats de jeu (objets, missions, équipes, votes, calendrier) : voir `repos-formats.ts`. */
+  formats: FormatTables;
 }
 
 export const emptyDb = (): Db => ({
@@ -81,6 +84,7 @@ export const emptyDb = (): Db => ({
   characterStates: new Map(),
   snapshots: new Map(),
   llmCalls: new Map(),
+  formats: emptyFormatTables(),
 });
 
 export const cloneDb = (db: Db): Db => structuredClone(db);
