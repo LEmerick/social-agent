@@ -17,6 +17,7 @@ export default defineConfig({
       { find: /^@ai-reality\/llm-anthropic$/, replacement: src('llm-anthropic/src/index.ts') },
       { find: /^@ai-reality\/narrative$/, replacement: src('narrative/src/index.ts') },
       { find: /^@ai-reality\/play$/, replacement: src('play/src/index.ts') },
+      { find: /^@ai-reality\/cli$/, replacement: src('cli/src/index.ts') },
     ],
   },
   test: {

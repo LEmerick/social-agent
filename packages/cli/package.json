@@ -1,0 +1,36 @@
+{
+  "name": "@ai-reality/cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "CLI ai-reality : run-epoch, replay, inspect",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "ai-reality": "./dist/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ai-reality/engine": "workspace:*",
+    "@ai-reality/llm-anthropic": "workspace:*",
+    "@ai-reality/storage-memory": "workspace:*",
+    "@ai-reality/storage-prisma": "workspace:*",
+    "@ai-reality/testkit": "workspace:*",
+    "@prisma/client": "^6"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.3"
+  }
+}
